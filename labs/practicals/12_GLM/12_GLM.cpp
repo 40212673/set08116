@@ -9,4 +9,16 @@
 using namespace std;
 using namespace glm;
 
+// translation matrix
+
+vec3 v1(1.0f, 1.0f, 0.0f);
+mat4 t1 = translate(mat4(1.0f), v1);
+
+// quaternions
+
+quat q;
+
+
+
+
 int main() {}
