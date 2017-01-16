@@ -9,7 +9,7 @@ geometry geom;
 effect eff;
 target_camera cam;
 
-const int num_points = 50000;
+const int num_points = 5000000;
 
 void create_sierpinski(geometry &geom) {
   vector<vec3> points;
@@ -28,15 +28,15 @@ void create_sierpinski(geometry &geom) {
   for (auto i = 1; i < num_points; ++i) {
     // *********************************
     // Add random point
-
+	  points.push_back((points[i-1] + v[dist(e)])/2.0f);
     // Add colour - all points red
-
+	  colours.push_back(vec4(1.0f, 0.0f, 0.0f, 1.0f));
     // *********************************
   }
   // *********************************
   // Add buffers to geometry
-
-
+  geom.add_buffer(points, BUFFER_INDEXES::POSITION_BUFFER);
+  geom.add_buffer(colours, BUFFER_INDEXES::COLOUR_BUFFER);
   // *********************************
 }
 
