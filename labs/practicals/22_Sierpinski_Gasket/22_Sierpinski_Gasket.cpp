@@ -19,19 +19,24 @@ void triangle(const vector<vec3> &points, vector<vec3> &positions, vector<vec4> 
 }
 
 void divide_triangle(const vector<vec3> &points, unsigned int count, vector<vec3> &positions, vector<vec4> &colours) {
-  // *********************************
-  // IF we have more divisions to do?
+	// *********************************
+	// IF we have more divisions to do?
+	if (count > 0)
+	{
+		// Calculate new vertices to work on
+		vec3 f0 = (points[0] + points[1]) / 2.0f;
+		vec3 f1 = (points[0] + points[2]) / 2.0f;
+		vec3 f2 = (points[1] + points[2]) / 2.0f;
+		// Divide new triangles
+		divide_triangle({ points[0], f0, f1 }, count-1, positions, colours);
+		divide_triangle({ f1, f2, points[2] }, count - 1, positions, colours);
+		divide_triangle({ f0, points[1], f2 }, count - 1, positions, colours);
+	}
 
-    // Calculate new vertices to work on
-
-    // Divide new triangles
-
-
-
-
-
-
-
+	else
+	{
+		triangle(points, positions, colours);
+	}
   // *********************************
 }
 
@@ -39,7 +44,7 @@ bool load_content() {
   // Required buffers
   vector<vec3> positions;
   vector<vec4> colours;
-  divide_triangle({vec3(1.0f, -1.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f), vec3(-1.0f, -1.0f, 0.0f)}, 4, positions, colours);
+  divide_triangle({vec3(1.0f, -1.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f), vec3(-1.0f, -1.0f, 0.0f)}, 2, positions, colours);
 
   // Add to the geometry
   geom.add_buffer(positions, BUFFER_INDEXES::POSITION_BUFFER);
