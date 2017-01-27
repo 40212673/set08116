@@ -9,23 +9,27 @@ using namespace glm;
 mesh m;
 effect eff;
 target_camera cam;
-texture tex;
+texture tex, tex2;
 
 bool load_content() {
   // Construct geometry object
   geometry geom;
+  geometry geom2;
   // Create triangle data
   // Positions
-  vector<vec3> positions{vec3(0.0f, 1.0f, 0.0f), vec3(-1.0f, -1.0f, 0.0f), vec3(1.0f, -1.0f, 0.0f)};
+  vector<vec3> positions{vec3(1.0f, 1.0f, 0.0f), vec3(-1.0f, 1.0f, 0.0f), vec3(-1.0f, -1.0f, 0.0f),
+	  vec3(1.0f, 1.0f, 0.0f), vec3(-1.0f, -1.0f, 0.0f), vec3(1.0f, -1.0f, 0.0f) };
+
   // *********************************
   // Define texture coordinates for triangle
-
+  vector<vec2> tex_coords{ vec2(3.0f,3.0f), vec2(0.0f, 3.0f), vec2( 0.0f, 0.0f), vec2(3.0f, 3.0f),
+								vec2(0.0f, 0.0f), vec2(3.0f, 0.0f)};
   // *********************************
   // Add to the geometry
   geom.add_buffer(positions, BUFFER_INDEXES::POSITION_BUFFER);
   // *********************************
   // Add texture coordinate buffer to geometry
-
+  geom.add_buffer(tex_coords, BUFFER_INDEXES::TEXTURE_COORDS_0);
   // *********************************
 
   // Create mesh object
@@ -36,10 +40,12 @@ bool load_content() {
   eff.add_shader("27_Texturing_Shader/simple_texture.frag", GL_FRAGMENT_SHADER);
   // *********************************
   // Build effect
-
+  eff.build();
   // Load texture "textures/sign.jpg"
-
+  tex = texture("textures/sign.jpg");
+  tex2 = texture("textures/checker.png");
   // *********************************
+
 
   // Set camera properties
   cam.set_position(vec3(10.0f, 10.0f, 10.0f));
@@ -68,16 +74,29 @@ bool render() {
   glUniformMatrix4fv(eff.get_uniform_location("MVP"), // Location of uniform
                      1,                               // Number of values - 1 mat4
                      GL_FALSE,                        // Transpose the matrix?
-                     value_ptr(MVP));                 // Pointer to matrix data
+                     value_ptr(MVP)); 
+  
+
+  // Pointer to matrix data
 
   // *********************************
   // Bind texture to renderer
-
+  renderer::bind(tex, 0);
+  renderer::bind(tex2, 1);
   // Set the texture value for the shader here
+  glUniform1i(eff.get_uniform_location("tex"), 0);
+  renderer::render(m);
 
-  // *********************************
 
+  mat4 M2 = translate(M, vec3(2.0f, 2.0f, 0.0f));
+  MVP = P * V * M2;
+
+  glUniformMatrix4fv(eff.get_uniform_location("MVP"), // Location of uniform
+	  1,                               // Number of values - 1 mat4
+	  GL_FALSE,                        // Transpose the matrix?
+	  value_ptr(MVP));
   // Render the mesh
+  glUniform1i(eff.get_uniform_location("tex"), 1);
   renderer::render(m);
 
   return true;
