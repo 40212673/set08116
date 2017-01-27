@@ -14,7 +14,6 @@ texture tex, tex2;
 bool load_content() {
   // Construct geometry object
   geometry geom;
-  geometry geom2;
   // Create triangle data
   // Positions
   vector<vec3> positions{vec3(1.0f, 1.0f, 0.0f), vec3(-1.0f, 1.0f, 0.0f), vec3(-1.0f, -1.0f, 0.0f),
@@ -22,8 +21,8 @@ bool load_content() {
 
   // *********************************
   // Define texture coordinates for triangle
-  vector<vec2> tex_coords{ vec2(3.0f,3.0f), vec2(0.0f, 3.0f), vec2( 0.0f, 0.0f), vec2(3.0f, 3.0f),
-								vec2(0.0f, 0.0f), vec2(3.0f, 0.0f)};
+  vector<vec2> tex_coords{ vec2(6.0f,6.0f), vec2(0.0f, 6.0f), vec2( 0.0f, 0.0f), vec2(6.0f, 6.0f),
+								vec2(0.0f, 0.0f), vec2(6.0f, 0.0f)};
   // *********************************
   // Add to the geometry
   geom.add_buffer(positions, BUFFER_INDEXES::POSITION_BUFFER);
