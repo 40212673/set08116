@@ -8,8 +8,6 @@ using namespace glm;
 geometry geom;
 effect eff;
 target_camera cam;
-float theta = 0.0f;
-float rho = 0.0f;
 vec3 pos(0.0f, 0.0f, 0.0f);
 float s = 1.0f;
 
@@ -100,8 +98,6 @@ bool update(float delta_time) {
 	return true;
   // *********************************
   // Update the camera
-  cam.update(delta_time);
-  return true;
 }
 
 bool render() {
