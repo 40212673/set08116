@@ -33,12 +33,12 @@ bool load_content() {
   m.get_transform().scale = vec3(10.0f, 10.0f, 10.0f);
 
   // Load in blend shader
-  eff.add_shader("35_Blended_Textures/blend.vert", GL_VERTEX_SHADER);
-  eff.add_shader("35_Blended_Textures/blend.frag", GL_FRAGMENT_SHADER);
+  eff.add_shader("32_Blended_Textures/blend.vert", GL_VERTEX_SHADER);
+  eff.add_shader("32_Blended_Textures/blend.frag", GL_FRAGMENT_SHADER);
 
   // Build effect
   eff.build();
-
+  
   // Load main two textures
   texs[0] = texture("textures/grass.jpg");
   texs[1] = texture("textures/stonygrass.jpg");
@@ -76,9 +76,9 @@ bool render() {
 
   // *********************************
   // Bind the three textures - use different index for each
-
-
-
+  renderer::bind(texs[0], 0);
+  renderer::bind(texs[1], 1);
+  renderer::bind(blend_map, 2);
   // *********************************
 
   // Set the uniform values for textures

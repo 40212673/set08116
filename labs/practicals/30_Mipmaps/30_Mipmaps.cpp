@@ -29,9 +29,9 @@ bool load_content() {
   // Create three mesh objects - reuse geometry
   for (auto &m : meshes) {
     // *********************************
-
+	  m = mesh(geom);
     // Scale each mesh by 10
-
+	  m.get_transform().scale *= 10;
     // *********************************
   }
 
@@ -40,8 +40,8 @@ bool load_content() {
     meshes[i].get_transform().translate((static_cast<float>(i) * vec3(21.0f, 0.0f, 0.0f)) - vec3(21.0f, 0.0f, 0));
   }
   // Load in texture shaders, !Note that are pulling in shader file from previous project!
-  eff.add_shader("31_Texturing_Shader/simple_texture.vert", GL_VERTEX_SHADER);
-  eff.add_shader("31_Texturing_Shader/simple_texture.frag", GL_FRAGMENT_SHADER);
+  eff.add_shader("27_Texturing_Shader/simple_texture.vert", GL_VERTEX_SHADER);
+  eff.add_shader("27_Texturing_Shader/simple_texture.frag", GL_FRAGMENT_SHADER);
 
   // Build effect
   eff.build();
@@ -50,7 +50,7 @@ bool load_content() {
   // 0 - no mipmaps
   texs[0] = texture("textures/checker.png", false, false);
   // 1 - Auto Generate mipmaps
-  texs[1] = texture("textures/checker.png", true, false);
+  texs[1] = texture("textures/checker.png", true, true);
   // 2 - Manual Mip Levels
   texs[2] = texture({"textures/uv_32.png", "textures/uv_16.png", "textures/uv_8.png", "textures/uv_4.png",
                      "textures/uv_2.png", "textures/uv_1.png"},
@@ -93,11 +93,11 @@ bool render() {
 
     // *********************************
     // Bind correct texture to renderer
-
+	renderer::bind(texs[i], 0);
     // Set the texture value for the shader here
-
+	glUniform1i(eff.get_uniform_location("texs"), 0);
     // Render the mesh
-
+	renderer::render(meshes[i]);
     // *********************************
   }
 
