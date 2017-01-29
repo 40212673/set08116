@@ -5,25 +5,30 @@ using namespace std;
 using namespace graphics_framework;
 using namespace glm;
 
-mesh m;
+mesh m1;
+mesh m2;
 effect eff;
 target_camera cam;
 
 bool load_content() {
   // Construct geometry object
-  geometry geom;
+  geometry geom1;
+  geometry geom2;
   // Create triangle data
   // Positions
-  vector<vec3> positions{vec3(0.0f, 1.0f, 0.0f), vec3(-1.0f, -1.0f, 0.0f), vec3(1.0f, -1.0f, 0.0f)};
+  vector<vec3> positions1{vec3(0.0f, 1.0f, 0.0f), vec3(-1.0f, -1.0f, 0.0f), vec3(1.0f, -1.0f, 0.0f)};
+  vector<vec3> positions2{ vec3(2.0f, 1.0f, 0.0f), vec3(1.0f, -1.0f, 0.0f), vec3(3.0f, -1.0f, 0.0f) };
   // Colours
   vector<vec4> colours{vec4(1.0f, 0.0f, 0.0f, 1.0f), vec4(1.0f, 0.0f, 0.0f, 1.0f), vec4(1.0f, 0.0f, 0.0f, 1.0f)};
   // Add to the geometry
-  geom.add_buffer(positions, BUFFER_INDEXES::POSITION_BUFFER);
-  geom.add_buffer(colours, BUFFER_INDEXES::COLOUR_BUFFER);
-
+  geom1.add_buffer(positions1, BUFFER_INDEXES::POSITION_BUFFER);
+  geom1.add_buffer(colours, BUFFER_INDEXES::COLOUR_BUFFER);
+  geom2.add_buffer(positions2, BUFFER_INDEXES::POSITION_BUFFER);
+  geom2.add_buffer(colours, BUFFER_INDEXES::COLOUR_BUFFER);
   // *********************************
   // Create mesh object here
-  m = mesh(geom);
+  m1 = mesh(geom1);
+  m2 = mesh(geom2);
   // *********************************
 
   // Load in shaders
@@ -47,38 +52,41 @@ bool update(float delta_time) {
   // O decrease scale, P increase scale
   // Use the mesh functions, I've left two of the IFs as a hint
   if (glfwGetKey(renderer::get_window(), 'W')) {
-    m.get_transform().position -= vec3(0.0f, 0.0f, 5.0f) * delta_time;
+    m1.get_transform().position -= vec3(0.0f, 0.0f, 5.0f) * delta_time;
   }
   // *********************************
   if (glfwGetKey(renderer::get_window(), 'S')) {
-	  m.get_transform().position -= vec3(0.0f, 0.0f, -5.0f) * delta_time;
+	  m1.get_transform().position -= vec3(0.0f, 0.0f, -5.0f) * delta_time;
   }
   if (glfwGetKey(renderer::get_window(), 'A')) {
-	  m.get_transform().position -= vec3(5.0f, 0.0f, 0.0f) * delta_time;
+	  m1.get_transform().position -= vec3(5.0f, 0.0f, 0.0f) * delta_time;
   }
   if (glfwGetKey(renderer::get_window(), 'D')) {
-	  m.get_transform().position -= vec3(-5.0f, 0.0f, 0.0f) * delta_time;
+	  m1.get_transform().position -= vec3(-5.0f, 0.0f, 0.0f) * delta_time;
   }
+  // *********************************
+  //if (glfwGetKey(renderer::get_window(), GLFW_KEY_UP)) {
+  //  m.get_transform().rotate(vec3(-pi<float>() * delta_time, 0.0f, 0.0f));
+  //}
   // *********************************
   if (glfwGetKey(renderer::get_window(), GLFW_KEY_UP)) {
-    m.get_transform().rotate(vec3(-pi<float>() * delta_time, 0.0f, 0.0f));
+	  m2.get_transform().position -= vec3(0.0f, 0.0f, 5.0f) * delta_time;
   }
-  // *********************************
   if (glfwGetKey(renderer::get_window(), GLFW_KEY_DOWN)) {
-	  m.get_transform().rotate(vec3(pi<float>() * delta_time, 0.0f, 0.0f));
+	  m2.get_transform().position -= vec3(0.0f, 0.0f, -5.0f) * delta_time;
   }
   if (glfwGetKey(renderer::get_window(), GLFW_KEY_RIGHT)) {
-	  m.get_transform().rotate(vec3(0.0f , 0.0f, -pi<float>() * delta_time));
+	  m2.get_transform().position -= vec3(-5.0f, 0.0f, 0.0f) * delta_time;
   }
   if (glfwGetKey(renderer::get_window(), GLFW_KEY_LEFT)) {
-	  m.get_transform().rotate(vec3(0.0f, 0.0f, pi<float>() * delta_time));
+	  m2.get_transform().position -= vec3( 5.0f, 0.0f, 0.0f) * delta_time;
   }
   // *********************************
   if (glfwGetKey(renderer::get_window(), 'O')) {
-	  m.get_transform().scale *= 1.1;
+	  m1.get_transform().scale *= 1.1;
   }
   if (glfwGetKey(renderer::get_window(), 'P')) {
-	  m.get_transform().scale /= 1.1;
+	  m1.get_transform().scale /= 1.1;
   }
   // Update the camera
   cam.update(delta_time);
@@ -88,21 +96,32 @@ bool update(float delta_time) {
 bool render() {
   // Bind effect
   renderer::bind(eff);
-  mat4 M;
+  mat4 M1;
+  mat4 M2;
   // *********************************
   // Get the model transform from the mesh
-  M = m.get_transform().get_transform_matrix();
+  M1 = m1.get_transform().get_transform_matrix();
   // *********************************
   // Create MVP matrix
   auto V = cam.get_view();
   auto P = cam.get_projection();
-  auto MVP = P * V * M;
+  auto MVP = P * V * M1;
   // Set MVP matrix uniform
   glUniformMatrix4fv(eff.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
   // *********************************
   // Render the mesh here
-  renderer::render(m);
+  renderer::render(m1);
   // *********************************
+
+  M2 = m2.get_transform().get_transform_matrix();
+  // *********************************
+  // Create MVP matrix
+  MVP = P * V * M2;
+  // Set MVP matrix uniform
+  glUniformMatrix4fv(eff.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
+  // *********************************
+  // Render the mesh here
+  renderer::render(m2);
   return true;
 }
 
