@@ -93,9 +93,9 @@ bool render() {
 
     // *********************************
     // Bind correct texture to renderer
-	renderer::bind(texs[i], 0);
+	renderer::bind(texs[i], i);
     // Set the texture value for the shader here
-	glUniform1i(eff.get_uniform_location("texs"), 0);
+	glUniform1i(eff.get_uniform_location("tex"), i);
     // Render the mesh
 	renderer::render(meshes[i]);
     // *********************************

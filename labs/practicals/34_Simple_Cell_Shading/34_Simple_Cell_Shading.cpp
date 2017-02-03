@@ -51,8 +51,8 @@ bool load_content() {
   m = mesh(geom);
 
   // Load in simple cell shader
-  eff.add_shader("37_Simple_Cell_Shading/simple_cell.vert", GL_VERTEX_SHADER);
-  eff.add_shader("37_Simple_Cell_Shading/simple_cell.frag", GL_FRAGMENT_SHADER);
+  eff.add_shader("34_Simple_Cell_Shading/simple_cell.vert", GL_VERTEX_SHADER);
+  eff.add_shader("34_Simple_Cell_Shading/simple_cell.frag", GL_FRAGMENT_SHADER);
 
   // Build effect
   eff.build();
@@ -94,9 +94,9 @@ bool render() {
 
   // *********************************
   // Bind texture to renderer
-
+  renderer::bind(tex, 0);
   // Set the texture value for the shader here
-
+  glUniform1i(eff.get_uniform_location("tex"), 0);
   // *********************************
 
   // Render the mesh

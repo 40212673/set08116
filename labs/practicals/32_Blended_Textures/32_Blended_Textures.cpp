@@ -43,7 +43,7 @@ bool load_content() {
   texs[0] = texture("textures/grass.jpg");
   texs[1] = texture("textures/stonygrass.jpg");
   // Load blend map, try both blend_map1.png and blend_map2.jpg
-  blend_map = texture("textures/blend_map1.png");
+  blend_map = texture("textures/blend_map2.jpg");
 
   // Set camera properties
   cam.set_position(vec3(0.0f, 0.0f, 30.0f));

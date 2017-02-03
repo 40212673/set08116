@@ -28,7 +28,7 @@ void divide_triangle(const vector<vec3> &points, unsigned int count, vector<vec3
 		vec3 f1 = (points[0] + points[2]) / 2.0f;
 		vec3 f2 = (points[1] + points[2]) / 2.0f;
 		// Divide new triangles
-		divide_triangle({ points[0], f0, f1 }, count-1, positions, colours);
+		divide_triangle({ points[0], f0, f1 }, count - 1, positions, colours);
 		divide_triangle({ f1, f2, points[2] }, count - 1, positions, colours);
 		divide_triangle({ f0, points[1], f2 }, count - 1, positions, colours);
 	}
