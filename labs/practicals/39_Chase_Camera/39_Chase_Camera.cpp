@@ -61,8 +61,8 @@ bool load_content() {
   tex = texture("textures/checker.png");
 
   // Load in shaders
-  eff.add_shader("31_Texturing_Shader/simple_texture.vert", GL_VERTEX_SHADER);
-  eff.add_shader("31_Texturing_Shader/simple_texture.frag", GL_FRAGMENT_SHADER);
+  eff.add_shader("27_Texturing_Shader/simple_texture.vert", GL_VERTEX_SHADER);
+  eff.add_shader("27_Texturing_Shader/simple_texture.frag", GL_FRAGMENT_SHADER);
   // Build effect
   eff.build();
 
@@ -70,8 +70,7 @@ bool load_content() {
   cam.set_pos_offset(vec3(0.0f, 2.0f, 10.0f));
   cam.set_springiness(0.5f);
   cam.move(meshes["chaser"].get_transform().position, eulerAngles(meshes["chaser"].get_transform().orientation));
-  auto aspect = static_cast<float>(renderer::get_screen_width()) / static_cast<float>(renderer::get_screen_height());
-  cam.set_projection(quarter_pi<float>(), aspect, 2.414f, 1000.0f);
+  cam.set_projection(quarter_pi<float>(), renderer::get_screen_aspect(), 0.1f, 1000.0f);
   return true;
 }
 
@@ -81,9 +80,10 @@ bool update(float delta_time) {
 
   // The ratio of pixels to rotation - remember the fov
   static double ratio_width = quarter_pi<float>() / static_cast<float>(renderer::get_screen_width());
-  static double ratio_height = (quarter_pi<float>() * (static_cast<float>(renderer::get_screen_height()) /
-                                                       static_cast<float>(renderer::get_screen_width()))) /
-                               static_cast<float>(renderer::get_screen_height());
+  static double ratio_height =
+      (quarter_pi<float>() *
+       (static_cast<float>(renderer::get_screen_height()) / static_cast<float>(renderer::get_screen_width()))) /
+      static_cast<float>(renderer::get_screen_height());
 
   double current_x;
   double current_y;
