@@ -61,23 +61,23 @@ bool update(float delta_time) {
   // *********************************
   // Use keyboard to change camera location
   // 1 - (50, 10, 50)
-
-
-
+	if (glfwGetKey(renderer::get_window(), '1')) {
+		cam.set_position(vec3(50, 10, 50));
+	}
   // 2 - (-50, 10, 50)
-
-
-
+	if (glfwGetKey(renderer::get_window(), '2')) {
+		cam.set_position(vec3(-50, 10, 50));
+	}
   // 3 - (-50, 10, -50)
-
-
-
+	if (glfwGetKey(renderer::get_window(), '3')) {
+		cam.set_position(vec3(-50, 10, -50));
+	}
   // 4 - (50, 10, -50)
-
-
-
+	if (glfwGetKey(renderer::get_window(), '4')) {
+		cam.set_position(vec3(50, 10, -50));
+	}
   // Update the camera
-
+	cam.update(delta_time);
   // *********************************
 
   return true;
