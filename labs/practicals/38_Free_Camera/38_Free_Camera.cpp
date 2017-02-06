@@ -83,36 +83,35 @@ bool update(float delta_time) {
   // Get the current cursor position
   glfwGetCursorPos(renderer::get_window(), &current_x, &current_y);
   // Calculate delta of cursor positions from last frame
-
-
+  float delta_x = current_x - cursor_x;
+  float delta_y = current_y - cursor_y;
   // Multiply deltas by ratios - gets actual change in orientation
-
-
+  delta_x *= ratio_width;
+  delta_y *= ratio_height;
   // Rotate cameras by delta
   // delta_y - x-axis rotation
   // delta_x - y-axis rotation
-
+  cam.rotate(delta_x, -delta_y);
   // Use keyboard to move the camera - WSAD
-
-
-
-
-
-
-
-
-
-
-
-
-
+  if (glfwGetKey(renderer::get_window(), 'W')) {
+	  cam.set_position(cam.get_position() - vec3(0.0f, 0.0f, 20.0f) * delta_time);
+  }
+  if (glfwGetKey(renderer::get_window(), 'S')) {
+	  cam.set_position(cam.get_position() - vec3(0.0f, 0.0f, -20.0f) * delta_time);
+  }
+  if (glfwGetKey(renderer::get_window(), 'A')) {
+	  cam.set_position(cam.get_position() - vec3(20.0f, 0.0f, 0.0f) * delta_time);
+  }
+  if (glfwGetKey(renderer::get_window(), 'D')) {
+	  cam.set_position(cam.get_position() - vec3(-20.0f, 0.0f, 0.0f) * delta_time);
+  }
   // Move camera
 
   // Update the camera
-
+  cam.update(delta_time);
   // Update cursor pos
-
-
+  cursor_x = current_x;
+  cursor_y = current_y;
   // *********************************
   return true;
 }

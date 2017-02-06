@@ -15,9 +15,9 @@ double cursor_y = 0.0;
 bool initialise() {
   // *********************************
   // Set input mode - hide the cursor
-
+	glfwSetInputMode(renderer::get_window(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
   // Capture initial mouse position
-
+	glfwGetCursorPos(renderer::get_window(), &cursor_x, &cursor_y);
   // *********************************
 
   return true;
@@ -89,18 +89,18 @@ bool update(float delta_time) {
   double current_y;
   // *********************************
   // Get the current cursor position
-
+  glfwGetCursorPos(renderer::get_window(), &current_x, &current_y);
   // Calculate delta of cursor positions from last frame
-
-
+  float delta_x = current_x - cursor_x;
+  float delta_y = current_y - cursor_y;
   // Multiply deltas by ratios and delta_time - gets actual change in orientation
-
-
+  delta_x *= ratio_width * delta_time;
+  delta_y *= ratio_height * delta_time;
   // Rotate cameras by delta
   // x - delta_y
   // y - delta_x
   // z - 0
-
+  cam.rotate(vec3(delta_y, delta_x, 0));
   // Use keyboard to rotate target_mesh - QE rotate on y-axis
 
 
