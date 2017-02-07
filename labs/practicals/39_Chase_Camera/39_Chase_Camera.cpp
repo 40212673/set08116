@@ -102,34 +102,32 @@ bool update(float delta_time) {
   // z - 0
   cam.rotate(vec3(delta_y, delta_x, 0));
   // Use keyboard to rotate target_mesh - QE rotate on y-axis
-
-
-
-
+  if (glfwGetKey(renderer::get_window(), 'Q')) {
+	  meshes["chaser"].get_transform().rotate(vec3(0, pi<float>() / 180, 0));
+  }
+  if (glfwGetKey(renderer::get_window(), 'E')) {
+	  meshes["chaser"].get_transform().rotate(vec3(0, -pi<float>() / 180, 0));
+  }
   // Use keyboard to move the target_mesh - WSAD
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  if (glfwGetKey(renderer::get_window(), 'W')) {
+	  meshes["chaser"].get_transform().translate(vec3(0.0f, 0.0f, 5.0f) * delta_time);
+  }
+  if (glfwGetKey(renderer::get_window(), 'S')) {
+	  meshes["chaser"].get_transform().translate(vec3(0.0f, 0.0f, -5.0f) * delta_time);
+  }
+  if (glfwGetKey(renderer::get_window(), 'A')) {
+	  meshes["chaser"].get_transform().translate(vec3(5.0f, 0.0f, 0.0f) * delta_time);
+  }
+  if (glfwGetKey(renderer::get_window(), 'D')) {
+	  meshes["chaser"].get_transform().translate(vec3(-5.0f, 0.0f, 0.0f) * delta_time);
+  }
   // Move camera - update target position and rotation
 
   // Update the camera
-
+  cam.update(delta_time);
   // Update cursor pos
-
-
+  cursor_x = current_x;
+  cursor_y = current_y;
   // *********************************
   return true;
 }

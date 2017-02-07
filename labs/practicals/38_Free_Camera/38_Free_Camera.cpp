@@ -94,10 +94,10 @@ bool update(float delta_time) {
   cam.rotate(delta_x, -delta_y);
   // Use keyboard to move the camera - WSAD
   if (glfwGetKey(renderer::get_window(), 'W')) {
-	  cam.set_position(cam.get_position() - vec3(0.0f, 0.0f, 20.0f) * delta_time);
+	  cam.set_position(cam.get_position() + cam.get_forward() * 20.0f * delta_time);
   }
   if (glfwGetKey(renderer::get_window(), 'S')) {
-	  cam.set_position(cam.get_position() - vec3(0.0f, 0.0f, -20.0f) * delta_time);
+	  cam.set_position(cam.get_position() + cam.get_forward() * -20.0f * delta_time);
   }
   if (glfwGetKey(renderer::get_window(), 'A')) {
 	  cam.set_position(cam.get_position() - vec3(20.0f, 0.0f, 0.0f) * delta_time);
