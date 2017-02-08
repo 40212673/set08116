@@ -93,20 +93,21 @@ bool update(float delta_time) {
   // delta_x - y-axis rotation
   cam.rotate(delta_x, -delta_y);
   // Use keyboard to move the camera - WSAD
+  vec3 movement;
   if (glfwGetKey(renderer::get_window(), 'W')) {
-	  cam.set_position(cam.get_position() + cam.get_forward() * 20.0f * delta_time);
+	  movement = vec3(0.0f, 0.0f, 20.0f) * delta_time;
   }
   if (glfwGetKey(renderer::get_window(), 'S')) {
-	  cam.set_position(cam.get_position() + cam.get_forward() * -20.0f * delta_time);
+	  movement = vec3(0.0f, 0.0f, -20.0f) * delta_time;
   }
   if (glfwGetKey(renderer::get_window(), 'A')) {
-	  cam.set_position(cam.get_position() - vec3(20.0f, 0.0f, 0.0f) * delta_time);
+	  movement = vec3(-20.0f, 0.0f, 0.0f) * delta_time;
   }
   if (glfwGetKey(renderer::get_window(), 'D')) {
-	  cam.set_position(cam.get_position() - vec3(-20.0f, 0.0f, 0.0f) * delta_time);
+	  movement = vec3(20.0f, 0.0f, 0.0f) * delta_time;
   }
   // Move camera
-
+  cam.move(movement);
   // Update the camera
   cam.update(delta_time);
   // Update cursor pos

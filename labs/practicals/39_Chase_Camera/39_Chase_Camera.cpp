@@ -110,10 +110,10 @@ bool update(float delta_time) {
   }
   // Use keyboard to move the target_mesh - WSAD
   if (glfwGetKey(renderer::get_window(), 'W')) {
-	  meshes["chaser"].get_transform().translate(vec3(0.0f, 0.0f, 5.0f) * delta_time);
+	  meshes["chaser"].get_transform().translate(vec3(0.0f, 0.0f, -5.0f) * delta_time);
   }
   if (glfwGetKey(renderer::get_window(), 'S')) {
-	  meshes["chaser"].get_transform().translate(vec3(0.0f, 0.0f, -5.0f) * delta_time);
+	  meshes["chaser"].get_transform().translate(vec3(0.0f, 0.0f, 5.0f) * delta_time);
   }
   if (glfwGetKey(renderer::get_window(), 'A')) {
 	  meshes["chaser"].get_transform().translate(vec3(5.0f, 0.0f, 0.0f) * delta_time);
@@ -122,7 +122,7 @@ bool update(float delta_time) {
 	  meshes["chaser"].get_transform().translate(vec3(-5.0f, 0.0f, 0.0f) * delta_time);
   }
   // Move camera - update target position and rotation
-
+  cam.move(meshes["chaser"].get_transform().position, eulerAngles(meshes["chaser"].get_transform().orientation));
   // Update the camera
   cam.update(delta_time);
   // Update cursor pos
