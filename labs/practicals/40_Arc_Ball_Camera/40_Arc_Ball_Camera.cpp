@@ -97,28 +97,32 @@ bool update(float delta_time) {
   delta_y *= ratio_height * delta_time;// Rotate cameras by delta
   // delta_y - x-axis rotation
   // delta_x - y-axis rotation
-  cam.rotate(delta_y, -delta_x);
+  cam.rotate(5 * delta_y, 5 * -delta_x);
   // Use keyboard to move the target_mesh- WSAD
   // Also remember to translate camera
   if (glfwGetKey(renderer::get_window(), 'W')) {
 	  meshes["chaser"].get_transform().translate(vec3(0.0f, 0.0f, -5.0f) * delta_time);
+	  cam.translate(vec3(0.0f, 0.0f, -5.0f) * delta_time);
   }
   if (glfwGetKey(renderer::get_window(), 'S')) {
 	  meshes["chaser"].get_transform().translate(vec3(0.0f, 0.0f, 5.0f) * delta_time);
+	  cam.translate(vec3(0.0f, 0.0f, 5.0f) * delta_time);
   }
   if (glfwGetKey(renderer::get_window(), 'A')) {
-	  meshes["chaser"].get_transform().translate(vec3(5.0f, 0.0f, 0.0f) * delta_time);
+	  meshes["chaser"].get_transform().translate(vec3(-5.0f, 0.0f, 0.0f) * delta_time);
+	  cam.translate(vec3(-5.0f, 0.0f, 0.0f) * delta_time);
   }
   if (glfwGetKey(renderer::get_window(), 'D')) {
-	  meshes["chaser"].get_transform().translate(vec3(-5.0f, 0.0f, 0.0f) * delta_time);
+	  meshes["chaser"].get_transform().translate(vec3(5.0f, 0.0f, 0.0f) * delta_time);
+	  cam.translate(vec3(5.0f, 0.0f, 0.0f) * delta_time);
   }
   // Use UP and DOWN to change camera distance
-
-
-
-
-
-
+  if (glfwGetKey(renderer::get_window(), GLFW_KEY_UP)) {
+	  cam.set_distance(cam.get_distance() * 1.02);
+  }
+  if (glfwGetKey(renderer::get_window(), GLFW_KEY_DOWN)) {
+	  cam.set_distance(cam.get_distance() * 0.98);
+  }
   // Update the camera
   cam.update(delta_time);
   // Update cursor pos
