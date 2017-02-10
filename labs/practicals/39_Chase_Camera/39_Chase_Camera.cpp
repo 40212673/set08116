@@ -110,7 +110,8 @@ bool update(float delta_time) {
   }
   // Use keyboard to move the target_mesh - WSAD
   if (glfwGetKey(renderer::get_window(), 'W')) {
-	  meshes["chaser"].get_transform().translate(vec3(0.0f, 0.0f, -5.0f) * delta_time);
+	  auto v = rotate(meshes["chaser"].get_transform().orientation, vec3(0.0f, 0.0f, -5.0f) * delta_time);
+	  meshes["chaser"].get_transform().translate(v);
   }
   if (glfwGetKey(renderer::get_window(), 'S')) {
 	  meshes["chaser"].get_transform().translate(vec3(0.0f, 0.0f, 5.0f) * delta_time);

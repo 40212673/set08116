@@ -118,10 +118,10 @@ bool update(float delta_time) {
   }
   // Use UP and DOWN to change camera distance
   if (glfwGetKey(renderer::get_window(), GLFW_KEY_UP)) {
-	  cam.set_distance(cam.get_distance() * 1.02);
+	  cam.set_distance(cam.get_distance() + 6.0f * delta_time);
   }
   if (glfwGetKey(renderer::get_window(), GLFW_KEY_DOWN)) {
-	  cam.set_distance(cam.get_distance() * 0.98);
+	  cam.set_distance(cam.get_distance() - 6.0f * delta_time);
   }
   // Update the camera
   cam.update(delta_time);
