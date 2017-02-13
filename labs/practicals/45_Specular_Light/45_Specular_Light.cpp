@@ -88,7 +88,7 @@ bool render() {
     auto MVP = P * V * M;
     // Set MVP matrix uniform
     glUniformMatrix4fv(eff.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
-    // *********************************
+    // ********************************* 
     // Set M matrix uniform
 	glUniformMatrix4fv(eff.get_uniform_location("M"), 1, GL_FALSE, value_ptr(M));
     // Set N matrix uniform - remember - 3x3 matrix
