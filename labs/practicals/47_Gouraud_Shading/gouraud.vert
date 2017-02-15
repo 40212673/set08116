@@ -47,13 +47,13 @@ void main() {
   // Calculate position
   gl_Position = MVP * vec4(position, 1.0);
   // Calculate ambient component
-  vec4 ambient = mat.diffuse_reflection * light.ambient_ intensity;
+  vec4 ambient = mat.diffuse_reflection * light.ambient_intensity;
   // Transform the normal
   vec3 transformed_normal = N * normal;
   // Calculate k
   float k1 = max(dot(transformed_normal, light.light_dir), 0.0f);
   // Calculate diffuse
-  vec4 diffuse = k1 * (material.diffuse * light.ight_colour);
+  vec4 diffuse = k1 * (mat.diffuse_reflection * light.light_colour);
   // Calculate world position of vertex
   vec3 world_position = vec3(M * vec4(position, 1.0));
   // Calculate view direction
@@ -62,13 +62,13 @@ void main() {
   vec3 half_vector  = normalize(light.light_dir + view_dir);
   // Calculate specular component
   // Calculate k
-  float k2 = pow(max(dot(transformed_normal, light.light_dir), 0.0f), material.shininess);
+  float k2 = pow(max(dot(transformed_normal, half_vector), 0.0f), mat.shininess);
   // Calculate specular
-  vec4 specular = k2 * (material.specular * light.light_colour);
+  vec4 specular = k2 * (mat.specular_reflection * light.light_colour);
   // Set primary
-  vec4 primary = material.emissive + ambient + diffuse;
+  primary = mat.emissive + ambient + diffuse;
   // Set secondary
-  vec4 = specular;
+  secondary = specular;
   // Ensure primary and secondary alphas are 1
   primary.a = 1.0f;
   secondary.a = 1.0f;

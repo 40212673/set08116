@@ -41,57 +41,48 @@ bool load_content() {
   meshes["torus"].get_transform().translate(vec3(-25.0f, 10.0f, -25.0f));
   meshes["torus"].get_transform().rotate(vec3(half_pi<float>(), 0.0f, 0.0f));
 
+  material mat;
   // *********************************
   // Set materials
   // - all emissive is black
   // - all specular is white
   // - all shininess is 25
+  mat.set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
+  mat.set_specular(vec4(1.0f, 1.0f, 1.0f, 1.0f));
+  mat.set_shininess(25.0f);
   // Red box
-
-
-
-
+  mat.set_diffuse(vec4(1.0f, 0.0f, 0.0f, 1.0f));
+  meshes["box"].set_material(mat);
   // Green tetra
-
-
-
-
+  mat.set_diffuse(vec4(0.0f, 1.0f, 0.0f, 1.0f));
+  meshes["tetra"].set_material(mat);
   // Blue pyramid
-
-
-
-
+  mat.set_diffuse(vec4(0.0f, 0.0f, 1.0f, 1.0f));
+  meshes["pyramid"].set_material(mat);
   // Yellow disk
-
-
-
-
+  mat.set_diffuse(vec4(1.0f, 1.0f, 0.0f, 1.0f));
+  meshes["disk"].set_material(mat);
   // Magenta cylinder
-
-
-
-
+  mat.set_diffuse(vec4(1.0f, 0.0f, 0.5f, 1.0f));
+  meshes["cylinder"].set_material(mat);
   // Cyan sphere
-
-
-
-
+  mat.set_diffuse(vec4(0.0f, 1.0f, 1.0f, 1.0f));
+  meshes["sphere"].set_material(mat);
   // White torus
-
-
-
-
+  mat.set_diffuse(vec4(1.0f, 1.0f, 1.0f, 1.0f));
+  meshes["torus"].set_material(mat);
   // *********************************
 
   // Load texture
   tex = texture("textures/checker.png");
   // *********************************
   // Set lighting values, Position (-25, 10, -10)
-
+  light.set_position(vec3(-25, 10, -10));
   // Light colour white
-
+  light.set_light_colour(vec4(1.0f, 1.0f, 1.0f, 1.0f));
   // Set range to 20
-
+  eff.add_shader("47_Gouraud_Shading/gouraud.frag", GL_FRAGMENT_SHADER);
+  eff.add_shader("47_Gouraud_Shading/gouraud.vert", GL_VERTEX_SHADER);
   // Load in shaders
 
 
@@ -174,21 +165,21 @@ bool render() {
 
     // *********************************
     // Set M matrix uniform
-
-    // Set N matrix uniform - remember - 3x3 matrix
-
-    // Bind material
-
-    // Bind light
-
-    // Bind texture
-
-    // Set tex uniform
-
-    // Set eye position- Get this from active camera
-
-    // Render mesh
-
+	glUniformMatrix4fv(eff.get_uniform_location("M"), 1, GL_FALSE, value_ptr(M));
+	// Set N matrix uniform - remember - 3x3 matrix
+	glUniformMatrix3fv(eff.get_uniform_location("N"), 1, GL_FALSE, value_ptr(mat3(m.get_transform().get_normal_matrix())));
+	// Bind material
+	renderer::bind(m.get_material(), "mat");
+	// Bind light
+	renderer::bind(light, "light");
+	// Bind texture
+	renderer::bind(tex, 0);
+	// Set tex uniform
+	glUniform1i(eff.get_uniform_location("tex"), 0);
+	// Set eye position - Get this from active camera
+	glUniform3fv(eff.get_uniform_location("eye_pos"), 1, value_ptr(cam.get_position()));
+	// Render mesh
+	renderer::render(m);
     // *********************************
   }
 

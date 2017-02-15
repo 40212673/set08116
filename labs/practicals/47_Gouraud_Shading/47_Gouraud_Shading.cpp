@@ -11,6 +11,7 @@ texture tex;
 target_camera cam;
 directional_light light;
 
+
 bool load_content() {
   // Create plane mesh
   meshes["plane"] = mesh(geometry_builder::create_plane());
@@ -41,73 +42,57 @@ bool load_content() {
   meshes["torus"].get_transform().translate(vec3(-25.0f, 10.0f, -25.0f));
   meshes["torus"].get_transform().rotate(vec3(half_pi<float>(), 0.0f, 0.0f));
 
+  material mat;
   // *********************************
   // Set materials
   // - all emissive is black
   // - all specular is white
   // - all shininess is 25
-  float shine = 25.0f;
-  vec4 mat(1.0f, 10.0f, 10.0f, 1.0f);
-  vec4 emmissive(1.0f, 1.0f, 1.0f, 1.0f);
-  vec4 spec(0.0f, 0.0f, 1.0f, 1.0f);
+  mat.set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
+  mat.set_specular(vec4(1.0f, 1.0f, 1.0f, 1.0f));
+  mat.set_shininess(25.0f);
   // Red box
-  //meshes["box"].set_material(material( mat(vec4(), shine, emmissive, spec)));
-
-  meshes["box"].get_material().set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
-  meshes["box"].get_material().set_specular(vec4(1.0f, 1.0f, 1.0f, 1.0f));
-  meshes["box"].get_material().set_shininess(25.0f);
-  meshes["box"].get_material().set_diffuse(vec4(1.0f, 0.0f, 0.0f, 1.0f));
+  mat.set_diffuse(vec4(1.0f, 0.0f, 0.0f, 1.0f)); 
+  meshes["box"].set_material(mat);
   // Green tetra
-  meshes["tetra"].get_material().set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
-  meshes["tetra"].get_material().set_specular(vec4(1.0f, 1.0f, 1.0f, 1.0f));
-  meshes["tetra"].get_material().set_shininess(25.0f);
-
+  mat.set_diffuse(vec4(0.0f, 1.0f, 0.0f, 1.0f));
+  meshes["tetra"].set_material(mat);
   // Blue pyramid
-  meshes["pyramid"].get_material().set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
-  meshes["pyramid"].get_material().set_specular(vec4(1.0f, 1.0f, 1.0f, 1.0f));
-  meshes["pyramid"].get_material().set_shininess(25.0f);
-
+  mat.set_diffuse(vec4(0.0f, 0.0f, 1.0f, 1.0f));
+  meshes["pyramid"].set_material(mat);
   // Yellow disk
-  meshes["disk"].get_material().set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
-  meshes["disk"].get_material().set_specular(vec4(1.0f, 1.0f, 1.0f, 1.0f));
-  meshes["disk"].get_material().set_shininess(25.0f);
-
+  mat.set_diffuse(vec4(1.0f, 1.0f, 0.0f, 1.0f));
+  meshes["disk"].set_material(mat);
   // Magenta cylinder
-  meshes["cylinder"].get_material().set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
-  meshes["cylinder"].get_material().set_specular(vec4(1.0f, 1.0f, 1.0f, 1.0f));
-  meshes["cylinder"].get_material().set_shininess(25.0f);
-
+  mat.set_diffuse(vec4(1.0f, 0.0f, 0.5f, 1.0f));
+  meshes["cylinder"].set_material(mat);
   // Cyan sphere
-  meshes["sphere"].get_material().set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
-  meshes["sphere"].get_material().set_specular(vec4(1.0f, 1.0f, 1.0f, 1.0f));
-  meshes["sphere"].get_material().set_shininess(25.0f);
-
+  mat.set_diffuse(vec4(0.0f, 1.0f, 1.0f, 1.0f));
+  meshes["sphere"].set_material(mat);
   // White torus
-  meshes["torus"].get_material().set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
-  meshes["torus"].get_material().set_specular(vec4(1.0f, 1.0f, 1.0f, 1.0f));
-  meshes["torus"].get_material().set_shininess(25.0f);
-
+  mat.set_diffuse(vec4(1.0f, 1.0f, 1.0f, 1.0f));
+  meshes["torus"].set_material(mat);
   // *********************************
-
+   
   // Load texture
-  tex = texture("textures/checker.png");
+  tex = texture("textures/check_1.png");
 
   // *********************************
   // Set lighting values
   // ambient intensity (0.3, 0.3, 0.3)
-  //glUniform3fv(eff.get_uniform_location("light.ambient_intensity"), 1, value_ptr(vec3(0.3, 0.3, 0.3)));
-  // Light colour white
-  //glUniform4fv(eff.get_uniform_location("light.light_colour"), 1, value_ptr(vec4(1.0f, 1.0f, 1.0f, 1.0f)));
+  light.set_ambient_intensity(vec4(0.3f, 0.3f, 0.3f, 1.0f));
+  // Light colour white 
+  light.set_light_colour(vec4(1.0f, 1.0f, 1.0f, 1.0f));
   // Light direction (1.0, 1.0, -1.0)
-  //glUniform3fv(eff.get_uniform_location("light.light_dir"), 1, value_ptr(vec3(1.0f, 1.0f, -1.0f)));
+  light.set_direction(vec3(1.0f, 1.0f, -1.0f));
   // Load in shaders
   eff.add_shader("47_Gouraud_Shading/gouraud.frag", GL_FRAGMENT_SHADER);
   eff.add_shader("47_Gouraud_Shading/gouraud.vert", GL_VERTEX_SHADER);  
   // Build effect
   eff.build(); 
-  // *********************************
+  // ********************************* 
 
-  // Set camera properties
+  // Set camera properties 
   cam.set_position(vec3(50.0f, 10.0f, 50.0f));
   cam.set_target(vec3(0.0f, 0.0f, 0.0f));
   cam.set_projection(quarter_pi<float>(), renderer::get_screen_aspect(), 0.1f, 1000.0f);
@@ -156,7 +141,7 @@ bool render() {
     // Set N matrix uniform - remember - 3x3 matrix
 	glUniformMatrix3fv(eff.get_uniform_location("N"), 1, GL_FALSE, value_ptr(mat3(m.get_transform().get_normal_matrix())));
     // Bind material
-	
+	renderer::bind(m.get_material(), "mat");
     // Bind light
 	renderer::bind(light, "light");
     // Bind texture
@@ -170,7 +155,7 @@ bool render() {
     // *********************************
   }
 
-
+   
   return true;
 }
 
@@ -184,4 +169,4 @@ void main() {
   application.set_render(render);
   // Run application
   application.run();
-}
+} 
