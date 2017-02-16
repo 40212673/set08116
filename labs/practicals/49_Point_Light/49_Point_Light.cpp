@@ -77,62 +77,62 @@ bool load_content() {
   tex = texture("textures/checker.png");
   // *********************************
   // Set lighting values, Position (-25, 10, -10)
-  light.set_position(vec3(-25, 10, -10));
+  light.set_position(vec3(-25.0f, 10.0f, -10.0f));
   // Light colour white
   light.set_light_colour(vec4(1.0f, 1.0f, 1.0f, 1.0f));
   // Set range to 20
-  eff.add_shader("47_Gouraud_Shading/gouraud.frag", GL_FRAGMENT_SHADER);
-  eff.add_shader("47_Gouraud_Shading/gouraud.vert", GL_VERTEX_SHADER);
+  light.set_range(20.0f);
   // Load in shaders
-
-
-  // Build effect
-
+  eff.add_shader("49_Point_Light/point.frag", GL_FRAGMENT_SHADER);
+  eff.add_shader("49_Point_Light/point.vert", GL_VERTEX_SHADER);
+  // Build effect 
+  eff.build();
   // *********************************
 
-  // Set camera properties
+  // Set camera properties 
   cam.set_position(vec3(50.0f, 10.0f, 50.0f));
   cam.set_target(vec3(0.0f, 0.0f, 0.0f));
   cam.set_projection(quarter_pi<float>(), renderer::get_screen_aspect(), 0.1f, 1000.0f);
   return true;
 }
-
-bool update(float delta_time) {
-  // Range of the point light
+  
+bool update(float delta_time) { 
+  // Range of the point light 
   static float range = 20.0f;
   // *********************************
-
-
-
-
-
-
-
-
-
-
-
-
+  // move camera to different position
+  if (glfwGetKey(renderer::get_window(), '1')) {
+	  cam.set_position(vec3(50, 10, 50));
+  }
+  if (glfwGetKey(renderer::get_window(), '2')) {
+	  cam.set_position(vec3(-50, 10, 50));
+  }
+  if (glfwGetKey(renderer::get_window(), '3')) {
+	  cam.set_position(vec3(-50, 10, -50));
+  }
+  if (glfwGetKey(renderer::get_window(), '4')) {
+	  cam.set_position(vec3(50, 10, -50));
+  }
   // WSAD to move point light
-
-
-
-
-
-
-
-
-
-
-
-
+  if (glfwGetKey(renderer::get_window(), 'W')) {
+	  light.set_position(light.get_position() - vec3(10.0f, 0.0f, 0.0f) * delta_time);
+  }
+  if (glfwGetKey(renderer::get_window(), 'S')) {
+	  light.set_position(light.get_position() - vec3(-10.0f, 0.0f, 10.0f) * delta_time);
+  }
+  if (glfwGetKey(renderer::get_window(), 'A')) {
+	  light.set_position(light.get_position() - vec3(0.0f, 10.0f, 00.0f) * delta_time);
+  }
+  if (glfwGetKey(renderer::get_window(), 'D')) {
+	  light.set_position(light.get_position() - vec3(0.0f, -10.0f, 00.0f) * delta_time);
+  }   
   // O and P to change range
-
-
-
-
-
-
+  if (glfwGetKey(renderer::get_window(), 'O')) {
+	  range -= 500.0f * delta_time;
+  }
+  if (glfwGetKey(renderer::get_window(), 'P')) {
+	  range += 500.0f * delta_time;
+  }
   // *********************************
 
   // Set range
@@ -157,7 +157,7 @@ bool render() {
     auto V = cam.get_view();
     auto P = cam.get_projection();
     auto MVP = P * V * M;
-    // Set MVP matrix uniform
+    // Set MVP matrix uniform 
     glUniformMatrix4fv(eff.get_uniform_location("MVP"), // Location of uniform
                        1,                               // Number of values - 1 mat4
                        GL_FALSE,                        // Transpose the matrix?
@@ -171,7 +171,7 @@ bool render() {
 	// Bind material
 	renderer::bind(m.get_material(), "mat");
 	// Bind light
-	renderer::bind(light, "light");
+	renderer::bind(light, "point"); 
 	// Bind texture
 	renderer::bind(tex, 0);
 	// Set tex uniform
@@ -179,7 +179,7 @@ bool render() {
 	// Set eye position - Get this from active camera
 	glUniform3fv(eff.get_uniform_location("eye_pos"), 1, value_ptr(cam.get_position()));
 	// Render mesh
-	renderer::render(m);
+	renderer::render(m); 
     // *********************************
   }
 
