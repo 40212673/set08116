@@ -49,10 +49,10 @@ bool load_content() {
   // - all shininess is 25
   mat.set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
   mat.set_specular(vec4(1.0f, 1.0f, 1.0f, 1.0f));
-  mat.set_shininess(25.0f);
+  mat.set_shininess(25.0f); 
   // Red box
   mat.set_diffuse(vec4(1.0f, 0.0f, 0.0f, 1.0f));
-  meshes["box"].set_material(mat);
+  meshes["box"].set_material(mat);  
   // Green tetra
   mat.set_diffuse(vec4(0.0f, 1.0f, 0.0f, 1.0f));
   meshes["tetra"].set_material(mat);
@@ -62,7 +62,7 @@ bool load_content() {
   // Yellow disk
   mat.set_diffuse(vec4(1.0f, 1.0f, 0.0f, 1.0f)); 
   meshes["disk"].set_material(mat);
-  // Magenta cylinder
+  // Magenta cylinder    
   mat.set_diffuse(vec4(1.0f, 0.0f, 0.5f, 1.0f));
   meshes["cylinder"].set_material(mat);
   // Cyan sphere
@@ -71,11 +71,11 @@ bool load_content() {
   // White torus
   mat.set_diffuse(vec4(1.0f, 1.0f, 1.0f, 1.0f));
   meshes["torus"].set_material(mat);
-  // ********************************* 
-  // Load texture  
-  tex = texture("textures/checker.png"); 
+  // *********************************           
+  // Load texture 
+  tex = texture("textures/checker.png");   
   // *********************************
-  // ambient intensity (0.3, 0.3, 0.3)
+  // ambient intensity (0.3, 0.3, 0.3)  
   light.set_ambient_intensity(vec4(0.3f, 0.3f, 0.3f, 1.0f));
   // Light colour white 
   light.set_light_colour(vec4(1.0f, 1.0f, 1.0f, 1.0f));
