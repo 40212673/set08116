@@ -71,11 +71,11 @@ uniform vec3 eye_pos;
 uniform sampler2D tex;
 
 // Incoming position
-layout(location = 0) in vec3 position;
+layout(location = 0) in vec3 vertex_position;
 // Incoming normal
-layout(location = 1) in vec3 normal;
+layout(location = 1) in vec3 transformed_normal;
 // Incoming texture coordinate
-layout(location = 2) in vec2 tex_coord;
+layout(location = 2) in vec2 tex_coord_out;
 
 // Outgoing colour
 layout(location = 0) out vec4 colour;
@@ -83,18 +83,20 @@ layout(location = 0) out vec4 colour;
 void main() {
   // *********************************
   // Calculate view direction
-
+  vec3 view_dir = normalize(eye_pos - vertex_position);
   // Sample texture
+  vec4 texture_sample = texture(tex, tex_coord_out);
 
-  // Calculate directional light colour
-
+  colour += calculate_direction(light, mat, transformed_normal, view_dir, texture_sample);
   // Sum point lights
-
-
-
+  for (int i = 0; i < 4; ++i) {
+	colour += calculate_point(points[i], mat, vertex_position, transformed_normal, view_dir, texture_sample);
+  }
   // Sum spot lights
+    for (int i = 0; i < 5; ++i) {
+	colour += calculate_spot(spots[i], mat, vertex_position, transformed_normal, view_dir, texture_sample);
+  }
 
-
-
+	
   // *********************************
 }
