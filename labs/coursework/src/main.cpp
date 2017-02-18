@@ -34,6 +34,7 @@ bool load_content() {
 	meshes["gate_ceiling"] = mesh(geometry_builder::create_box(vec3(26.0f, 2.5f, 6.0f)));
 	meshes["horn1"] = mesh(geometry_builder::create_pyramid(vec3(6.0f, 8.0f, 6.0f)));
 	meshes["pentagram1"] = mesh(geometry_builder::create_cylinder(1, 64, vec3(10.0f, 0.05f, 10.0f)));
+	meshes["pool"] = mesh(geometry("objects/pool.obj"));
   
 	// Build gate
 	meshes["column1"].get_transform().scale = vec3(4.0f, 15.0f, 4.0f);
@@ -50,6 +51,10 @@ bool load_content() {
 	meshes["pentagram1"].get_transform().rotate(vec3(half_pi<float>(), 0.0f, 0.0f));
 	meshes["pentagram2"] = meshes["pentagram1"];
 	meshes["pentagram2"].get_transform().translate(vec3(-55.0f, 0.0f, 0.0f));
+
+	// Set up pool
+	meshes["pool"].get_transform().scale = vec3(20.0f);
+	meshes["pool"].get_transform().translate(vec3(0.0f, -0.01f, -30.0f));
 
 	// Load texture  
 	tex = texture("textures/check_1.png");
