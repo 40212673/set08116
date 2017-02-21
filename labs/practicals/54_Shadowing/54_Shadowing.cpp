@@ -65,9 +65,9 @@ bool load_content() {
   main_eff.add_shader(frag_shaders, GL_FRAGMENT_SHADER);
 
   shadow_eff.add_shader("50_Spot_Light/spot.vert", GL_VERTEX_SHADER);
-  shadow_eff.add_shader("50_Spot_Light/spot.frag", GL_FRAGMENT_SHADER);
+  shadow_eff.add_shader("50_Spot_Light/spot.frag", GL_FRAGMENT_SHADER); 
 
-  // Build effects
+  // Build effects  
   main_eff.build();
   shadow_eff.build();
 
@@ -171,12 +171,12 @@ bool render() {
 	renderer::bind(spot, "spot");
     // Bind texture
 	renderer::bind(tex, 0);
-    // Set tex uniform
+    // Set tex uniform 
 	glUniform1i(main_eff.get_uniform_location("tex"), 0);
     // Set eye position
 	glUniform3fv(main_eff.get_uniform_location("eye_pos"), 1, value_ptr(cam.get_position()));
     // Bind shadow map texture - use texture unit 1
-	renderer::bind(shadow, 1);
+	renderer::bind(shadow.buffer->get_depth(), 1);
 	//Set the shadow_map uniform
 	glUniform1i(shadow_eff.get_uniform_location("shadow_map"), 1);
     // Render mesh
