@@ -28,6 +28,7 @@ bool initialise() {
 
 bool load_content() {
   
+	// TODO set hierarchy
 	// Create and transform meshes
 	meshes["plane"] = mesh(geometry_builder::create_plane());
 	meshes["column1"] = mesh(geometry_builder::create_cylinder());
