@@ -74,7 +74,6 @@ bool update(float delta_time) {
   shadow.light_position = spot.get_position();
   // do the same for light_dir property
   shadow.light_dir = spot.get_direction();
->>>>>>> c3231faad293b77d9eea3c1c790a04f8ff3c1113
   // *********************************
 
   // Press s to save

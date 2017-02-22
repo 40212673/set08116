@@ -22,15 +22,15 @@ bool load_content() {
   // Create "teapot" mesh by loading in models/teapot.obj
 	meshes["teapot"] = mesh(geometry("models/teapot.obj"));
   // Translate Teapot(0,4,0)
-
+	meshes["teapot"].get_transform().translate(vec3(0.0, 0.4, 0.0));
   // Scale the teapot - (0.1, 0.1, 0.1)
     meshes["teapot"].get_transform().scale = vec3(0.1, 0.1, 0.1);
   // *********************************
 
-  // Load texture
+  // Load texture 
   tex = texture("textures/checked.gif");
 
-  // ***********************
+  // *********************** 
   // Set materials
   // - all emissive is black
   // - all specular is white
@@ -196,9 +196,9 @@ glCullFace(GL_BACK);
     // Bind shadow map texture - use texture unit 1
 	renderer::bind(shadow.buffer->get_depth(), 1);
     // Set the shadow_map uniform
-	glUniform1i(shadow_eff.get_uniform_location("shadow_map"), 1);
+	glUniform1i(main_eff.get_uniform_location("shadow_map"), 1);
     // Render mesh
-	renderer::set_render_target();
+	renderer::render(m);
     // *********************************
   }
 
