@@ -5,10 +5,11 @@ using namespace std;
 using namespace graphics_framework;
 using namespace glm;
 
-map<string, mesh> meshes;
+map<string, mesh> meshes_basic, meshes_normal, meshes_light;
 geometry geom;
-effect eff;
-texture tex;
+effect basic_eff, lighting_eff;
+map<string, texture> texs;
+map<string, texture*> tex_maps;
 free_camera cam;
 double cursor_x = 0.0;
 double cursor_y = 0.0;
@@ -58,15 +59,16 @@ bool load_content() {
 	meshes["pool"].get_transform().translate(vec3(0.0f, -0.01f, -30.0f));
 
 	// Load texture  
-	tex = texture("textures/check_1.png");
-  
-  
+	texs["check"] = texture("textures/check_1.png");
+	tex_maps["column1"] = &(texs["check"]);
+	tex_maps["column2"] = &(texs["check"]);
+
 	// Load in shaders  
-	eff.add_shader("shaders/simple_texture.vert", GL_VERTEX_SHADER);  
-	eff.add_shader("shaders/simple_texture.frag", GL_FRAGMENT_SHADER);
+	basic_eff.add_shader("shaders/simple_texture.vert", GL_VERTEX_SHADER);  
+	basic_eff.add_shader("shaders/simple_texture.frag", GL_FRAGMENT_SHADER);
   
 	// Build effect  
-	eff.build();
+	basic_eff.build();
 
   
 	// Set camera properties  
@@ -145,17 +147,22 @@ bool render() {
 	for (auto &e : meshes) {
 		auto m = e.second;
 		// Bind effect
-		renderer::bind(eff);
+		renderer::bind(basic_eff);
 		// Create MVP matrix
 		auto M = m.get_transform().get_transform_matrix();
 		auto V = cam.get_view();
 		auto P = cam.get_projection();
 		auto MVP = P * V * M;
 		// Set MVP matrix uniform
-		glUniformMatrix4fv(eff.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
-		// Bind and set texture
-		renderer::bind(tex, 0);
-		glUniform1i(eff.get_uniform_location("tex"), 0);
+		glUniformMatrix4fv(basic_eff.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
+		// Bind and set texture 
+		if (tex_maps.count(e.first)){
+			renderer::bind(*tex_maps[e.first], 0);
+		}
+		else {
+			renderer::bind(texs["check"], 0);
+		}
+		glUniform1i(basic_eff.get_uniform_location("tex"), 0);
 		// Render mesh
 		renderer::render(m);
 	}

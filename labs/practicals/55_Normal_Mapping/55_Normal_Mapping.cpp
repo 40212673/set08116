@@ -18,16 +18,16 @@ bool load_content() {
   cylinder.get_transform().scale = vec3(5.0f, 5.0f, 5.0f);
 
   // Load brick.jpg texture
-  tex = texture("textures/brick.jpg");
+  tex = texture("textures/lava.png");
   // Load brick_normalmap.jpg texture
-  normal_map = texture("textures/brick_normalmap.jpg");
+  normal_map = texture("textures/lava_normalmap.png");
 
   // ****************************
   // Set material
-  // - emissive black - diffuse (0.53, 0.45, 0.37)
+  // - emissive black - diffuse (0.53, 0.45, 0.37) 
   // - specular white - shininess 25
   // ****************************
-  cylinder.get_material().set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
+  cylinder.get_material().set_emissive(vec4(0.4f, 0.0f, 0.0f, 1.0f));
   cylinder.get_material().set_diffuse(vec4(0.53f, 0.45f, 0.37f, 1.0f));
   cylinder.get_material().set_specular(vec4(1.0f, 1.0f, 1.0f, 1.0f));
   cylinder.get_material().set_shininess(25.0f);
@@ -47,7 +47,7 @@ bool load_content() {
   // Build effect
   eff.build();
 
-  // Set camera properties
+  // Set camera properties 
   cam.set_position(vec3(0.0f, 2.0f, 15.0f));
   cam.set_target(vec3(0.0f, 0.0f, 0.0f));
   cam.set_projection(quarter_pi<float>(), renderer::get_screen_aspect(), 0.1f, 1000.0f);
@@ -89,21 +89,21 @@ bool render() {
                      value_ptr(cylinder.get_transform().get_normal_matrix()));
   // *********************************
   // Bind material
-
+  renderer::bind(cylinder.get_material(), "mat");
   // Bind light
-
+  renderer::bind(light, "light");
   // Bind texture
-
+  renderer::bind(tex, 0);
   // Set tex uniform
-
+  glUniform1i(eff.get_uniform_location("tex"), 0);
   // Bind normal_map
-
+  renderer::bind(normal_map, 1);
   // Set normal_map uniform
-
+  glUniform1i(eff.get_uniform_location("normal_map"), 1);
   // Set eye position
-
+  glUniform3fv(eff.get_uniform_location("eye_pos"), 1, value_ptr(cam.get_position()));
   // Render mesh
-
+  renderer::render(cylinder);
   // *********************************
   return true;
 }

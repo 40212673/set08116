@@ -39,15 +39,15 @@ uniform sampler2D tex;
 uniform sampler2D normal_map;
 
 // Incoming vertex position
-layout(location = 0) in vec3 position;
+layout(location = 0) in vec3 vertex_position;
 // Incoming texture coordinate
-layout(location = 1) in vec2 tex_coord;
+layout(location = 1) in vec2 tex_coord_out;
 // Incoming normal
-layout(location = 2) in vec3 normal;
+layout(location = 2) in vec3 transformed_normal;
 // Incoming tangent
-layout(location = 3) in vec3 tangent;
+layout(location = 3) in vec3 tangent_out;
 // Incoming binormal
-layout(location = 4) in vec3 binormal;
+layout(location = 4) in vec3 binormal_out;
 
 // Outgoing colour
 layout(location = 0) out vec4 colour;
@@ -55,12 +55,12 @@ layout(location = 0) out vec4 colour;
 void main() {
   // *********************************
   // Sample texture
-
+  vec4 tex_sample = texture(tex, tex_coord_out);
   // Calculate view direction
-
+  vec3 view_dir = normalize(eye_pos - vertex_position);
   // Calculate normal from normal map
-
+  vec3 normie = calc_normal(transformed_normal, tangent_out, binormal_out, normal_map, tex_coord_out);
   // Calculate directional light
-
+  colour = calculate_direction(light, mat, normie, view_dir, tex_sample);
   // *********************************
 }
