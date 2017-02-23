@@ -5,9 +5,9 @@ using namespace std;
 using namespace graphics_framework;
 using namespace glm;
 
-map<string, mesh> meshes_basic, meshes_normal, meshes_light;
+map<string, mesh> meshes_basic, meshes_normal, meshes_light, blend_mesh;
 geometry geom;
-effect basic_eff, lighting_eff;
+effect basic_eff, lighting_eff, normal_eff;
 map<string, texture> texs;
 map<string, texture*> tex_maps;
 free_camera cam;
@@ -30,33 +30,33 @@ bool initialise() {
 bool load_content() {
   
 	// TODO set hierarchy
-	// Create and transform meshes
-	meshes["plane"] = mesh(geometry_builder::create_plane());
-	meshes["column1"] = mesh(geometry_builder::create_cylinder());
-	meshes["gate_ceiling"] = mesh(geometry_builder::create_box(vec3(26.0f, 2.5f, 6.0f)));
-	meshes["horn1"] = mesh(geometry_builder::create_pyramid(vec3(6.0f, 8.0f, 6.0f)));
-	meshes["pentagram1"] = mesh(geometry_builder::create_cylinder(1, 64, vec3(10.0f, 0.05f, 10.0f)));
-	meshes["pool"] = mesh(geometry("objects/pool.obj"));
+	// Create and transform meshes_basic
+	meshes_normal["plane"] = mesh(geometry_builder::create_plane());
+	meshes_basic["column1"] = mesh(geometry_builder::create_cylinder());
+	meshes_basic["gate_ceiling"] = mesh(geometry_builder::create_box(vec3(26.0f, 2.5f, 6.0f)));
+	meshes_basic["horn1"] = mesh(geometry_builder::create_pyramid(vec3(6.0f, 8.0f, 6.0f)));
+	meshes_normal["pentagram1"] = mesh(geometry_builder::create_cylinder(1, 64, vec3(10.0f, 0.05f, 10.0f)));
+	meshes_normal["pool"] = mesh(geometry("objects/pool.obj"));
   
 	// Build gate
-	meshes["column1"].get_transform().scale = vec3(4.0f, 15.0f, 4.0f);
-	meshes["column1"].get_transform().translate(vec3(-10.0f, 7.5f, 30.0f));
-	meshes["column2"] = meshes["column1"];
-	meshes["column2"].get_transform().translate(vec3(20.0f, 0.0f, 0.0f));
-	meshes["gate_ceiling"].get_transform().translate(vec3(0.0f, 15.0f, 30.0f));
-	meshes["horn1"].get_transform().translate(vec3(-10.0f, 20.0f, 30.f));
-	meshes["horn2"] = meshes["horn1"];
-	meshes["horn2"].get_transform().translate(vec3(20.0f, 0.0f, 0.0f));
+	meshes_basic["column1"].get_transform().scale = vec3(4.0f, 15.0f, 4.0f);
+	meshes_basic["column1"].get_transform().translate(vec3(-10.0f, 7.5f, 30.0f));
+	meshes_basic["column2"] = meshes_basic["column1"];
+	meshes_basic["column2"].get_transform().translate(vec3(20.0f, 0.0f, 0.0f));
+	meshes_basic["gate_ceiling"].get_transform().translate(vec3(0.0f, 15.0f, 30.0f));
+	meshes_basic["horn1"].get_transform().translate(vec3(-10.0f, 20.0f, 30.f));
+	meshes_basic["horn2"] = meshes_basic["horn1"];
+	meshes_basic["horn2"].get_transform().translate(vec3(20.0f, 0.0f, 0.0f));
   
 	// Set up Pentagrams
-	meshes["pentagram1"].get_transform().translate(vec3(27.5f, 8.0f, 30.0f));
-	meshes["pentagram1"].get_transform().rotate(vec3(half_pi<float>(), 0.0f, 0.0f));
-	meshes["pentagram2"] = meshes["pentagram1"];
-	meshes["pentagram2"].get_transform().translate(vec3(-55.0f, 0.0f, 0.0f));
+	meshes_normal["pentagram1"].get_transform().translate(vec3(27.5f, 8.0f, 30.0f));
+	meshes_normal["pentagram1"].get_transform().rotate(vec3(half_pi<float>(), 0.0f, 0.0f));
+	meshes_normal["pentagram2"] = meshes_basic["pentagram1"];
+	meshes_normal["pentagram2"].get_transform().translate(vec3(-55.0f, 0.0f, 0.0f));
 
 	// Set up pool
-	meshes["pool"].get_transform().scale = vec3(20.0f);
-	meshes["pool"].get_transform().translate(vec3(0.0f, -0.01f, -30.0f));
+	meshes_normal["pool"].get_transform().scale = vec3(20.0f);
+	meshes_normal["pool"].get_transform().translate(vec3(0.0f, -0.01f, -30.0f));
 
 	// Load texture  
 	texs["check"] = texture("textures/check_1.png");
@@ -120,16 +120,16 @@ bool update(float delta_time) {
 	cam.move(movement);
 
 	// Rotate pentagrams
-	meshes["pentagram1"].get_transform().rotate(vec3(0.0f, 0.0f, half_pi<float>()) * delta_time);
-	meshes["pentagram2"].get_transform().rotate(vec3(0.0f, 0.0f, half_pi<float>()) * delta_time);
+	meshes_basic["pentagram1"].get_transform().rotate(vec3(0.0f, 0.0f, half_pi<float>()) * delta_time);
+	meshes_basic["pentagram2"].get_transform().rotate(vec3(0.0f, 0.0f, half_pi<float>()) * delta_time);
 
 	t += delta_time;
 	// Move pentagrams up and down
 	if (velocity_pent == 1.0 || velocity_pent == -1.0)
 		incrementor_pent = -incrementor_pent;
 	// Increase velocity
-	meshes["pentagram1"].get_transform().translate(vec3(0.0f, sin(t)*0.04 , 0.0f));
-	meshes["pentagram2"].get_transform().translate(vec3(0.0f, sin(t)*0.04, 0.0f));
+	meshes_basic["pentagram1"].get_transform().translate(vec3(0.0f, sin(t)*0.04 , 0.0f));
+	meshes_basic["pentagram2"].get_transform().translate(vec3(0.0f, sin(t)*0.04, 0.0f));
 
 	// Update the camera
 	cam.update(delta_time);
@@ -143,8 +143,8 @@ bool update(float delta_time) {
 }
 
 bool render() {
-	// Render meshes
-	for (auto &e : meshes) {
+	// Render meshes_basic
+	for (auto &e : meshes_basic) {
 		auto m = e.second;
 		// Bind effect
 		renderer::bind(basic_eff);
@@ -153,6 +153,10 @@ bool render() {
 		auto V = cam.get_view();
 		auto P = cam.get_projection();
 		auto MVP = P * V * M;
+
+		// Hierarchy chain for the gate
+
+
 		// Set MVP matrix uniform
 		glUniformMatrix4fv(basic_eff.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
 		// Bind and set texture 
@@ -166,7 +170,32 @@ bool render() {
 		// Render mesh
 		renderer::render(m);
 	}
+	/*
+	// Render meshes_normal
+	for (auto &e : meshes_normal) {
+		auto m = e.second;
+		// Bind effect
+		renderer::bind(basic_eff);
+		// Create MVP matrix
+		auto M = m.get_transform().get_transform_matrix();
+		auto V = cam.get_view();
+		auto P = cam.get_projection();
+		auto MVP = P * V * M;
 
+		// Set MVP matrix uniform
+		glUniformMatrix4fv(basic_eff.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
+		// Bind and set texture 
+		if (tex_maps.count(e.first)) {
+			renderer::bind(*tex_maps[e.first], 0);
+		}
+		else {
+			renderer::bind(texs["check"], 0);
+		}
+		glUniform1i(basic_eff.get_uniform_location("tex"), 0);
+		// Render mesh
+		renderer::render(m);
+	}
+	*/
 	return true;
 }
 
