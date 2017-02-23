@@ -51,7 +51,7 @@ bool load_content() {
 	// Set up Pentagrams
 	meshes_normal["pentagram1"].get_transform().translate(vec3(27.5f, 8.0f, 30.0f));
 	meshes_normal["pentagram1"].get_transform().rotate(vec3(half_pi<float>(), 0.0f, 0.0f));
-	meshes_normal["pentagram2"] = meshes_basic["pentagram1"];
+	meshes_normal["pentagram2"] = meshes_normal["pentagram1"];
 	meshes_normal["pentagram2"].get_transform().translate(vec3(-55.0f, 0.0f, 0.0f));
 
 	// Set up pool
@@ -120,16 +120,16 @@ bool update(float delta_time) {
 	cam.move(movement);
 
 	// Rotate pentagrams
-	meshes_basic["pentagram1"].get_transform().rotate(vec3(0.0f, 0.0f, half_pi<float>()) * delta_time);
-	meshes_basic["pentagram2"].get_transform().rotate(vec3(0.0f, 0.0f, half_pi<float>()) * delta_time);
+	meshes_normal["pentagram1"].get_transform().rotate(vec3(0.0f, 0.0f, half_pi<float>()) * delta_time);
+	meshes_normal["pentagram2"].get_transform().rotate(vec3(0.0f, 0.0f, half_pi<float>()) * delta_time);
 
 	t += delta_time;
 	// Move pentagrams up and down
 	if (velocity_pent == 1.0 || velocity_pent == -1.0)
 		incrementor_pent = -incrementor_pent;
 	// Increase velocity
-	meshes_basic["pentagram1"].get_transform().translate(vec3(0.0f, sin(t)*0.04 , 0.0f));
-	meshes_basic["pentagram2"].get_transform().translate(vec3(0.0f, sin(t)*0.04, 0.0f));
+	meshes_normal["pentagram1"].get_transform().translate(vec3(0.0f, sin(t)*0.04 , 0.0f));
+	meshes_normal["pentagram2"].get_transform().translate(vec3(0.0f, sin(t)*0.04, 0.0f));
 
 	// Update the camera
 	cam.update(delta_time);
@@ -164,13 +164,14 @@ bool render() {
 			renderer::bind(*tex_maps[e.first], 0);
 		}
 		else {
+			cout << e.first << endl;
 			renderer::bind(texs["check"], 0);
 		}
 		glUniform1i(basic_eff.get_uniform_location("tex"), 0);
 		// Render mesh
 		renderer::render(m);
 	}
-	/*
+	
 	// Render meshes_normal
 	for (auto &e : meshes_normal) {
 		auto m = e.second;
@@ -195,7 +196,7 @@ bool render() {
 		// Render mesh
 		renderer::render(m);
 	}
-	*/
+	
 	return true;
 }
 
