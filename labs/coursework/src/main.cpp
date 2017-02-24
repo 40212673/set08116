@@ -27,7 +27,7 @@ public:
 };
 
 map<string, HMesh> meshes_basic, meshes_normal, meshes_phong, meshes_blend;
-effect eff_basic, eff_phong;
+effect eff_basic, eff_phong, eff_blend;
 map<string, texture> texs;
 map<string, texture*> tex_maps;
 free_camera cam;
@@ -52,6 +52,7 @@ bool load_content() {
 	
 	//Create Blend plane
 	meshes_blend["plane"] = HMesh(geometry_builder::create_plane());
+	meshes_blend["plane"].texture_scale = 0.1;
 
 	// Create and transform meshes_basic a.k.a the gate
 	meshes_basic["column1"] = HMesh(geometry_builder::create_cylinder(1, 16, vec3(4.0f, 15.0f, 4.0f)));
@@ -79,7 +80,7 @@ bool load_content() {
 
 	meshes_phong["pentagram1"] = HMesh(geometry_builder::create_cylinder(1, 64, vec3(10.0f, 0.05f, 10.0f)));
 	meshes_phong["pentagram1"].texture_scale = 0.1;
-	meshes_normal["pool"] = HMesh(geometry("objects/pool.obj"));
+	meshes_phong["pool"] = HMesh(geometry("objects/pool.obj"));
 
 	// Set up Pentagrams
 	meshes_phong["pentagram1"].get_transform().translate(vec3(27.5f, 8.0f, 30.0f));
@@ -89,25 +90,33 @@ bool load_content() {
 	meshes_phong["pentagram2"].get_transform().translate(vec3(-55.0f, 0.0f, 0.0f));
 
 	// Set up pool
-	meshes_normal["pool"].get_transform().scale = vec3(20.0f);
-	meshes_normal["pool"].get_transform().translate(vec3(0.0f, -0.01f, -30.0f));
+	meshes_phong["pool"].get_transform().scale = vec3(20.0f);
+	meshes_phong["pool"].get_transform().translate(vec3(0.0f, -0.01f, -30.0f));
 
 	//Set up materials
-	material mat1;
-	mat1.set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
-	mat1.set_specular(vec4(1.0f, 1.0f, 1.0f, 1.0f));
-	mat1.set_shininess(500.0f);
-	mat1.set_diffuse(vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	material mat;
+	mat.set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
+	mat.set_specular(vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	mat.set_shininess(500.0f);
+	mat.set_diffuse(vec4(1.0f, 1.0f, 1.0f, 1.0f));
 
-	meshes_phong["pentagram1"].set_material(mat1);
-	meshes_phong["pentagram2"].set_material(mat1);
+	meshes_phong["pentagram1"].set_material(mat);
+	meshes_phong["pentagram2"].set_material(mat);
+
+	mat.set_shininess(100.0f);
+	mat.set_specular(vec4(0.5f, 0.5f, 0.5f, 1.0f));
+	for (auto &e : meshes_basic)
+	{
+		e.second.set_material(mat);
+	}
 
 	// Load texture  
 	texs["check"] = texture("textures/check_1.png");
 	texs["gate"] = texture("textures/gate_red.png");
 	texs["pentagram"] = texture("textures/pentagram.png");
 	texs["blood"] = texture("textures/blood.png");
-	texs["blood"] = texture("textures/blood.png");
+	texs["black_rock"] = texture("textures/black_rock.png");
+	texs["blend_map"] = texture("textures/blend_map1.png");
 	tex_maps["column1"] = &(texs["gate"]);
 	tex_maps["column2"] = &(texs["gate"]);
 	tex_maps["gate_ceiling"] = &(texs["gate"]);
@@ -115,18 +124,22 @@ bool load_content() {
 	tex_maps["horn2"] = &(texs["gate"]);
 	tex_maps["pentagram1"] = &(texs["pentagram"]);
 	tex_maps["pentagram2"] = &(texs["pentagram"]);
+	tex_maps["pool"] = &(texs["black_rock"]);
 
 
-	// Load in shaders for basic
+	// Load in shaders
 	eff_basic.add_shader("shaders/simple_texture.vert", GL_VERTEX_SHADER);  
 	eff_basic.add_shader("shaders/simple_texture.frag", GL_FRAGMENT_SHADER);
 	eff_phong.add_shader("shaders/phong.vert", GL_VERTEX_SHADER);
 	eff_phong.add_shader("shaders/phong.frag", GL_FRAGMENT_SHADER);
+	eff_blend.add_shader("shaders/blend.vert", GL_VERTEX_SHADER);
+	eff_blend.add_shader("shaders/blend.frag", GL_FRAGMENT_SHADER);
 
   
 	// Build effect  
 	eff_basic.build();
 	eff_phong.build();
+	eff_blend.build();
 
   
 	// Set camera properties  
@@ -215,10 +228,46 @@ mat4 hierarchyCreation (HMesh *m)
 	return M;
 }
 
+// Function for blended plane
+
+void renderBlend(HMesh &m)
+{
+
+	// Bind effect
+	renderer::bind(eff_blend);
+	// Create MVP matrix
+	auto M = m.get_transform().get_transform_matrix();
+	auto V = cam.get_view();
+	auto P = cam.get_projection();
+	auto MVP = P * V * M;
+	// Set MVP matrix uniform
+	glUniformMatrix4fv(eff_blend.get_uniform_location("MVP"), // Location of uniform
+		1,                               // Number of values - 1 mat4
+		GL_FALSE,                        // Transpose the matrix?
+		value_ptr(MVP));                 // Pointer to matrix data
+
+	// bind textures
+	renderer::bind(texs["black_rock"], 0); 
+	renderer::bind(texs["blood"], 1);
+	renderer::bind(texs["blend_map"], 2);
+
+	// Set the uniform values for textures
+	static int tex_indices[] = { 0, 1 };
+	glUniform1iv(eff_blend.get_uniform_location("tex"), 2, tex_indices);
+	glUniform1i(eff_blend.get_uniform_location("blend"), 2);
+
+	// Set texture offset and scale
+	glUniform1f(eff_blend.get_uniform_location("tex_scale"), m.texture_scale);
+	glUniform2fv(eff_blend.get_uniform_location("texture_offset"), 1, value_ptr(m.texture_offset));
+
+	// Render the mesh
+	renderer::render(m);
+}
+
+
 bool render() {
 
 	// Render meshes_phong pentagrams
-
 
 	for (auto &e : meshes_phong) {
 		auto m = e.second;
@@ -230,6 +279,7 @@ bool render() {
 		auto P = cam.get_projection();
 		auto MVP = P * V * M;
 
+		// Set texture offset and scale
 		glUniform1f(eff_phong.get_uniform_location("tex_scale"), m.texture_scale);
 		glUniform2fv(eff_phong.get_uniform_location("texture_offset"), 1, value_ptr(m.texture_offset));
 		 
@@ -280,19 +330,38 @@ bool render() {
 
 		auto MVP = P * V * M;
 
+		// Set texture offset and scale
 		glUniform1f(eff_phong.get_uniform_location("tex_scale"), m.texture_scale);
 		glUniform2fv(eff_phong.get_uniform_location("texture_offset"), 1, value_ptr(m.texture_offset));
 
 		// Set MVP matrix uniform
-		glUniformMatrix4fv(eff_phong.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
-		// Bind and set texture 
-		if (tex_maps.count(e.first)){
+		glUniformMatrix4fv(eff_phong.get_uniform_location("MVP"), // Location of uniform
+			1,                               // Number of values - 1 mat4
+			GL_FALSE,                        // Transpose the matrix?
+			value_ptr(MVP));                 // Pointer to matrix data
+
+											 // Set M matrix uniform
+
+		glUniformMatrix4fv(eff_phong.get_uniform_location("M"), 1, GL_FALSE, value_ptr(M));
+
+		// ********************************* 
+		// Set N matrix uniform - remember - 3x3 matrix
+		glUniformMatrix3fv(eff_phong.get_uniform_location("N"), 1, GL_FALSE, value_ptr(m.get_transform().get_normal_matrix()));
+		// Bind material
+		renderer::bind(m.get_material(), "mat");
+		// Bind light
+		renderer::bind(light, "light");
+		// Bind texture
+		if (tex_maps.count(e.first)) {
 			renderer::bind(*tex_maps[e.first], 0);
 		}
 		else {
 			renderer::bind(texs["check"], 0);
 		}
+		// Set tex uniform
 		glUniform1i(eff_phong.get_uniform_location("tex"), 0);
+		// Set eye position - Get this from active camera
+		glUniform3fv(eff_phong.get_uniform_location("eye_pos"), 1, value_ptr(cam.get_position()));
 		// Render mesh
 		renderer::render(m);
 	}
@@ -325,6 +394,10 @@ bool render() {
 		renderer::render(m);
 	}
 	
+	// Render plane blend map
+
+	renderBlend(meshes_blend["plane"]);
+
 
 	
 	return true;
