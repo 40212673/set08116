@@ -85,8 +85,8 @@ bool load_content() {
   eff.add_shader("48_Phong_Shading/phong.frag", GL_FRAGMENT_SHADER);
   eff.add_shader("48_Phong_Shading/phong.vert", GL_VERTEX_SHADER);
   // Build effect 
-  eff.build();  
-  // *********************************
+  eff.build();   
+  // ********************************* 
         
   // Set camera properties
   cam.set_position(vec3(50.0f, 10.0f, 50.0f));
@@ -140,7 +140,7 @@ bool render() {
 
     // *********************************
     // Set N matrix uniform - remember - 3x3 matrix
-	glUniformMatrix3fv(eff.get_uniform_location("N"), 1, GL_FALSE, value_ptr(mat3(m.get_transform().get_normal_matrix())));
+	glUniformMatrix3fv(eff.get_uniform_location("N"), 1, GL_FALSE, value_ptr(m.get_transform().get_normal_matrix()));
     // Bind material
 	renderer::bind(m.get_material(), "mat");
     // Bind light

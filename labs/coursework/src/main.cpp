@@ -11,11 +11,13 @@ class HMesh : public mesh
 public:
 	HMesh* parent;
 	float texture_scale;
+	vec2 texture_offset;
 
 	HMesh(geometry g) : mesh (g)
 	{	
 		parent = nullptr;
 		texture_scale = 1.0f;
+		texture_offset = vec2(0.0f, 0.0f);
 	}
 
 	HMesh() : mesh()
@@ -24,9 +26,8 @@ public:
 	}
 };
 
-map<string, HMesh> meshes_basic;
-map<string, mesh> meshes_normal, meshes_phong, meshes_blend;
-effect eff_basic, lighting_eff, normal_eff;
+map<string, HMesh> meshes_basic, meshes_normal, meshes_phong, meshes_blend;
+effect eff_basic, eff_phong;
 map<string, texture> texs;
 map<string, texture*> tex_maps;
 free_camera cam;
@@ -50,7 +51,7 @@ bool initialise() {
 bool load_content() {
 	
 	//Create Blend plane
-	meshes_blend["plane"] = mesh(geometry_builder::create_plane());
+	meshes_blend["plane"] = HMesh(geometry_builder::create_plane());
 
 	// Create and transform meshes_basic a.k.a the gate
 	meshes_basic["column1"] = HMesh(geometry_builder::create_cylinder(1, 16, vec3(4.0f, 15.0f, 4.0f)));
@@ -76,12 +77,13 @@ bool load_content() {
   
 	// Other meshes
 
-	meshes_phong["pentagram1"] = mesh(geometry_builder::create_cylinder(1, 64, vec3(10.0f, 0.05f, 10.0f)));
-	
-	meshes_normal["pool"] = mesh(geometry("objects/pool.obj"));
+	meshes_phong["pentagram1"] = HMesh(geometry_builder::create_cylinder(1, 64, vec3(10.0f, 0.05f, 10.0f)));
+	meshes_phong["pentagram1"].texture_scale = 0.1;
+	meshes_normal["pool"] = HMesh(geometry("objects/pool.obj"));
 
 	// Set up Pentagrams
 	meshes_phong["pentagram1"].get_transform().translate(vec3(27.5f, 8.0f, 30.0f));
+	meshes_phong["pentagram1"].texture_offset = vec2(2.446f, 2.446f);
 	meshes_phong["pentagram1"].get_transform().rotate(vec3(half_pi<float>(), 0.0f, 0.0f));
 	meshes_phong["pentagram2"] = meshes_phong["pentagram1"];
 	meshes_phong["pentagram2"].get_transform().translate(vec3(-55.0f, 0.0f, 0.0f));
@@ -90,23 +92,39 @@ bool load_content() {
 	meshes_normal["pool"].get_transform().scale = vec3(20.0f);
 	meshes_normal["pool"].get_transform().translate(vec3(0.0f, -0.01f, -30.0f));
 
+	//Set up materials
+	material mat1;
+	mat1.set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
+	mat1.set_specular(vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	mat1.set_shininess(500.0f);
+	mat1.set_diffuse(vec4(1.0f, 1.0f, 1.0f, 1.0f));
 
+	meshes_phong["pentagram1"].set_material(mat1);
+	meshes_phong["pentagram2"].set_material(mat1);
 
 	// Load texture  
 	texs["check"] = texture("textures/check_1.png");
 	texs["gate"] = texture("textures/gate_red.png");
+	texs["pentagram"] = texture("textures/pentagram.png");
 	tex_maps["column1"] = &(texs["gate"]);
 	tex_maps["column2"] = &(texs["gate"]);
 	tex_maps["gate_ceiling"] = &(texs["gate"]);
 	tex_maps["horn1"] = &(texs["gate"]);
 	tex_maps["horn2"] = &(texs["gate"]);
+	tex_maps["pentagram1"] = &(texs["pentagram"]);
+	tex_maps["pentagram2"] = &(texs["pentagram"]);
+
 
 	// Load in shaders for basic
 	eff_basic.add_shader("shaders/simple_texture.vert", GL_VERTEX_SHADER);  
 	eff_basic.add_shader("shaders/simple_texture.frag", GL_FRAGMENT_SHADER);
+	eff_phong.add_shader("shaders/phong.vert", GL_VERTEX_SHADER);
+	eff_phong.add_shader("shaders/phong.frag", GL_FRAGMENT_SHADER);
+
   
 	// Build effect  
 	eff_basic.build();
+	eff_phong.build();
 
   
 	// Set camera properties  
@@ -158,16 +176,16 @@ bool update(float delta_time) {
 	cam.move(movement);
 
 	// Rotate pentagrams
-	meshes_normal["pentagram1"].get_transform().rotate(vec3(0.0f, 0.0f, half_pi<float>()) * delta_time);
-	meshes_normal["pentagram2"].get_transform().rotate(vec3(0.0f, 0.0f, half_pi<float>()) * delta_time);
+	meshes_phong["pentagram1"].get_transform().rotate(vec3(0.0f, 0.0f, half_pi<float>()) * delta_time);
+	meshes_phong["pentagram2"].get_transform().rotate(vec3(0.0f, 0.0f, half_pi<float>()) * delta_time);
 
 	t += delta_time;
 	// Move pentagrams up and down
 	if (velocity_pent == 1.0 || velocity_pent == -1.0)
 		incrementor_pent = -incrementor_pent;
 	// Increase velocity
-	meshes_normal["pentagram1"].get_transform().translate(vec3(0.0f, sin(t)*0.04 , 0.0f));
-	meshes_normal["pentagram2"].get_transform().translate(vec3(0.0f, sin(t)*0.04, 0.0f));
+	meshes_phong["pentagram1"].get_transform().translate(vec3(0.0f, sin(t)*0.04 , 0.0f));
+	meshes_phong["pentagram2"].get_transform().translate(vec3(0.0f, sin(t)*0.04, 0.0f));
 
 	// Update the camera
 	cam.update(delta_time);
@@ -196,11 +214,61 @@ mat4 hierarchyCreation (HMesh *m)
 }
 
 bool render() {
+
+	// Render meshes_phong pentagrams
+
+
+	for (auto &e : meshes_phong) {
+		auto m = e.second;
+		// Bind effect
+		renderer::bind(eff_phong);
+		// Create MVP matrix
+		auto M = m.get_transform().get_transform_matrix();
+		auto V = cam.get_view();
+		auto P = cam.get_projection();
+		auto MVP = P * V * M;
+
+		glUniform1f(eff_phong.get_uniform_location("tex_scale"), m.texture_scale);
+		glUniform2fv(eff_phong.get_uniform_location("texture_offset"), 1, value_ptr(m.texture_offset));
+		 
+		// Set MVP matrix uniform
+		glUniformMatrix4fv(eff_phong.get_uniform_location("MVP"), // Location of uniform
+			1,                               // Number of values - 1 mat4
+			GL_FALSE,                        // Transpose the matrix?
+			value_ptr(MVP));                 // Pointer to matrix data
+
+											 // Set M matrix uniform
+
+		glUniformMatrix4fv(eff_phong.get_uniform_location("M"), 1, GL_FALSE, value_ptr(M));   
+
+		// ********************************* 
+		// Set N matrix uniform - remember - 3x3 matrix
+		glUniformMatrix3fv(eff_phong.get_uniform_location("N"), 1, GL_FALSE, value_ptr(m.get_transform().get_normal_matrix()));
+		// Bind material
+		renderer::bind(m.get_material(), "mat");
+		// Bind light
+		renderer::bind(light, "light");
+		// Bind texture
+		if (tex_maps.count(e.first)) {
+			renderer::bind(*tex_maps[e.first], 0);
+		}
+		else {
+		renderer::bind(texs["check"], 0);
+		}
+		// Set tex uniform
+		glUniform1i(eff_phong.get_uniform_location("tex"), 0);
+		// Set eye position - Get this from active camera
+		glUniform3fv(eff_phong.get_uniform_location("eye_pos"), 1, value_ptr(cam.get_position()));
+		// Render mesh
+		renderer::render(m);
+		// *********************************
+	}
+	
 	// Render meshes_basic
 	for (auto &e : meshes_basic) {
 		auto m = e.second;
 		// Bind effect
-		renderer::bind(eff_basic);
+		renderer::bind(eff_phong);
 
 		auto V = cam.get_view();
 		auto P = cam.get_projection();
@@ -210,10 +278,11 @@ bool render() {
 
 		auto MVP = P * V * M;
 
-		glUniform1f(eff_basic.get_uniform_location("tex_scale"), m.texture_scale); 
+		glUniform1f(eff_phong.get_uniform_location("tex_scale"), m.texture_scale);
+		glUniform2fv(eff_phong.get_uniform_location("texture_offset"), 1, value_ptr(m.texture_offset));
 
 		// Set MVP matrix uniform
-		glUniformMatrix4fv(eff_basic.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
+		glUniformMatrix4fv(eff_phong.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
 		// Bind and set texture 
 		if (tex_maps.count(e.first)){
 			renderer::bind(*tex_maps[e.first], 0);
@@ -221,10 +290,11 @@ bool render() {
 		else {
 			renderer::bind(texs["check"], 0);
 		}
-		glUniform1i(eff_basic.get_uniform_location("tex"), 0);
+		glUniform1i(eff_phong.get_uniform_location("tex"), 0);
 		// Render mesh
 		renderer::render(m);
 	}
+	
 	
 	// Render meshes_normal
 	for (auto &e : meshes_normal) {
@@ -236,6 +306,8 @@ bool render() {
 		auto V = cam.get_view();
 		auto P = cam.get_projection();
 		auto MVP = P * V * M;
+		glUniform1f(eff_basic.get_uniform_location("tex_scale"), m.texture_scale);
+		glUniform2fv(eff_basic.get_uniform_location("texture_offset"), 1, value_ptr(m.texture_offset));
 
 		// Set MVP matrix uniform
 		glUniformMatrix4fv(eff_basic.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
@@ -250,45 +322,8 @@ bool render() {
 		// Render mesh
 		renderer::render(m);
 	}
+	
 
-	// Render meshes_phong
-
-	for (auto &e : meshes_phong) {
-		auto m = e.second;
-		// Bind effect
-		renderer::bind(eff);
-		// Create MVP matrix
-		auto M = m.get_transform().get_transform_matrix();
-		auto V = cam.get_view();
-		auto P = cam.get_projection();
-		auto MVP = P * V * M;
-		// Set MVP matrix uniform
-		glUniformMatrix4fv(eff.get_uniform_location("MVP"), // Location of uniform
-			1,                               // Number of values - 1 mat4
-			GL_FALSE,                        // Transpose the matrix?
-			value_ptr(MVP));                 // Pointer to matrix data
-
-											 // Set M matrix uniform
-
-		glUniformMatrix4fv(eff.get_uniform_location("M"), 1, GL_FALSE, value_ptr(M));
-
-		// *********************************
-		// Set N matrix uniform - remember - 3x3 matrix
-		glUniformMatrix3fv(eff.get_uniform_location("N"), 1, GL_FALSE, value_ptr(mat3(m.get_transform().get_normal_matrix())));
-		// Bind material
-		renderer::bind(m.get_material(), "mat");
-		// Bind light
-		renderer::bind(light, "light");
-		// Bind texture
-		renderer::bind(tex, 0);
-		// Set tex uniform
-		glUniform1i(eff.get_uniform_location("tex"), 0);
-		// Set eye position - Get this from active camera
-		glUniform3fv(eff.get_uniform_location("eye_pos"), 1, value_ptr(cam.get_position()));
-		// Render mesh
-		renderer::render(m);
-		// *********************************
-	}
 	
 	return true;
 }

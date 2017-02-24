@@ -24,6 +24,10 @@ uniform vec3 eye_pos;
 // Texture
 uniform sampler2D tex;
 
+//Adjusts for texture
+uniform float tex_scale;
+uniform vec2 texture_offset;
+
 // Incoming position
 // Incoming normal
 layout(location = 4) in vec3 trans_n;
@@ -53,11 +57,11 @@ void main() {
   // Calculate specular
   vec4 specular = k2 * (mat.specular_reflection * light.light_colour);
   // Sample texture
-  vec4 texture_sample = texture(tex, tex_coord);
+  vec4 texture_sample = texture(tex, (tex_coord * tex_scale) + texture_offset);
   // Calculate primary colour component
   vec4 primary = (mat.emissive + ambient + diffuse);
   // Calculate final colour - remember alpha
   primary.a = 1.0f;
-  colour = primary * texture_sample + specular;
+  colour = (primary * texture_sample + specular);
   // *********************************
 }
