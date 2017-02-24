@@ -5,12 +5,32 @@ using namespace std;
 using namespace graphics_framework;
 using namespace glm;
 
-map<string, mesh> meshes_basic, meshes_normal, meshes_light, meshes_blend;
-std::array<map<string, mesh>*, 5> meshes_basic_hierarchy;
+// Class created for ease of Hierarchy chain
+class HMesh : public mesh
+{
+public:
+	HMesh* parent;
+	float texture_scale;
+
+	HMesh(geometry g) : mesh (g)
+	{	
+		parent = nullptr;
+		texture_scale = 1.0f;
+	}
+
+	HMesh() : mesh()
+	{
+
+	}
+};
+
+map<string, HMesh> meshes_basic;
+map<string, mesh> meshes_normal, meshes_phong, meshes_blend;
 effect eff_basic, lighting_eff, normal_eff;
 map<string, texture> texs;
 map<string, texture*> tex_maps;
 free_camera cam;
+directional_light light;
 double cursor_x = 0.0;
 double cursor_y = 0.0;
 float incrementor_pent = 0.2f;
@@ -28,57 +48,60 @@ bool initialise() {
 }
 
 bool load_content() {
-  
-	// TODO set hierarchy
-	// Create and transform meshes_basic a.k.a the gate
-	meshes_basic["column1"] = mesh(geometry_builder::create_cylinder());
-	meshes_basic["column1"].get_transform().scale = vec3(4.0f, 15.0f, 4.0f);
-	meshes_basic["column2"] = meshes_basic["column1"];
-	meshes_basic["gate_ceiling"] = mesh(geometry_builder::create_box(vec3(26.0f, 2.5f, 6.0f)));
-	meshes_basic["horn1"] = mesh(geometry_builder::create_pyramid(vec3(6.0f, 8.0f, 6.0f)));
-	meshes_basic["horn2"] = meshes_basic["horn1"];
 	
-  
-	// Build gate
+	//Create Blend plane
+	meshes_blend["plane"] = mesh(geometry_builder::create_plane());
 
+	// Create and transform meshes_basic a.k.a the gate
+	meshes_basic["column1"] = HMesh(geometry_builder::create_cylinder(1, 16, vec3(4.0f, 15.0f, 4.0f)));
+	meshes_basic["column1"].texture_scale = 0.05;
+	meshes_basic["column2"] = meshes_basic["column1"];
+	meshes_basic["column2"].parent = &meshes_basic["column1"];
+	meshes_basic["gate_ceiling"] = HMesh(geometry_builder::create_box(vec3(26.0f, 2.5f, 6.0f)));
+	meshes_basic["gate_ceiling"].parent = &meshes_basic["column2"];
+	meshes_basic["horn1"] = HMesh(geometry_builder::create_pyramid(vec3(6.0f, 8.0f, 6.0f)));
+	meshes_basic["horn1"].texture_scale = 0.05;
+	meshes_basic["horn1"].parent = &meshes_basic["gate_ceiling"];
+	meshes_basic["horn2"] = meshes_basic["horn1"];
+	meshes_basic["horn2"].parent = &meshes_basic["horn1"];
+
+
+	// Build gate
 	meshes_basic["column1"].get_transform().translate(vec3(-10.0f, 7.5f, 30.0f));
 	meshes_basic["column2"].get_transform().translate(vec3(20.0f, 0.0f, 0.0f));
-	//meshes_basic["gate_ceiling"].get_transform().translate(vec3(0.0f, 15.0f, 30.0f));
 	meshes_basic["gate_ceiling"].get_transform().translate(vec3(-10.0f, 7.5f, 0.0f));
-	//meshes_basic["horn1"].get_transform().translate(vec3(-10.0f, 20.0f, 30.f));
 	meshes_basic["horn1"].get_transform().translate(vec3(-10.0f, 5.0f, 0.f));
 	meshes_basic["horn2"].get_transform().translate(vec3(20.0f, 0.0f, 0.0f));
+	
   
 	// Other meshes
 
-	meshes_normal["pentagram1"] = mesh(geometry_builder::create_cylinder(1, 64, vec3(10.0f, 0.05f, 10.0f)));
-	meshes_normal["plane"] = mesh(geometry_builder::create_plane());
+	meshes_phong["pentagram1"] = mesh(geometry_builder::create_cylinder(1, 64, vec3(10.0f, 0.05f, 10.0f)));
+	
 	meshes_normal["pool"] = mesh(geometry("objects/pool.obj"));
 
 	// Set up Pentagrams
-	meshes_normal["pentagram1"].get_transform().translate(vec3(27.5f, 8.0f, 30.0f));
-	meshes_normal["pentagram1"].get_transform().rotate(vec3(half_pi<float>(), 0.0f, 0.0f));
-	meshes_normal["pentagram2"] = meshes_normal["pentagram1"];
-	meshes_normal["pentagram2"].get_transform().translate(vec3(-55.0f, 0.0f, 0.0f));
+	meshes_phong["pentagram1"].get_transform().translate(vec3(27.5f, 8.0f, 30.0f));
+	meshes_phong["pentagram1"].get_transform().rotate(vec3(half_pi<float>(), 0.0f, 0.0f));
+	meshes_phong["pentagram2"] = meshes_phong["pentagram1"];
+	meshes_phong["pentagram2"].get_transform().translate(vec3(-55.0f, 0.0f, 0.0f));
 
 	// Set up pool
 	meshes_normal["pool"].get_transform().scale = vec3(20.0f);
 	meshes_normal["pool"].get_transform().translate(vec3(0.0f, -0.01f, -30.0f));
 
-	// Load gate into array for Hierarchy chain
-	int i = 0;
-	for (auto &e : meshes_basic)
-	{
-		meshes_basic_hierarchy[0] = e;
-		i++;
-	}
+
 
 	// Load texture  
 	texs["check"] = texture("textures/check_1.png");
-	tex_maps["column1"] = &(texs["check"]);
-	tex_maps["column2"] = &(texs["check"]);
+	texs["gate"] = texture("textures/gate_red.png");
+	tex_maps["column1"] = &(texs["gate"]);
+	tex_maps["column2"] = &(texs["gate"]);
+	tex_maps["gate_ceiling"] = &(texs["gate"]);
+	tex_maps["horn1"] = &(texs["gate"]);
+	tex_maps["horn2"] = &(texs["gate"]);
 
-	// Load in shaders  
+	// Load in shaders for basic
 	eff_basic.add_shader("shaders/simple_texture.vert", GL_VERTEX_SHADER);  
 	eff_basic.add_shader("shaders/simple_texture.frag", GL_FRAGMENT_SHADER);
   
@@ -157,23 +180,37 @@ bool update(float delta_time) {
 	return true;
 }
 
+mat4 hierarchyCreation (HMesh *m)
+{
+	// Create MVP matrix
+	auto M = m->get_transform().get_transform_matrix();
+
+
+
+	if (m->parent != nullptr)
+	{
+		M = hierarchyCreation(m->parent) * M;
+	}
+	
+	return M;
+}
+
 bool render() {
 	// Render meshes_basic
 	for (auto &e : meshes_basic) {
 		auto m = e.second;
 		// Bind effect
 		renderer::bind(eff_basic);
-		// Create MVP matrix
-		auto M = m.get_transform().get_transform_matrix();
+
 		auto V = cam.get_view();
 		auto P = cam.get_projection();
+		
+		// Hierarchy chain for the gate
+		mat4 M = hierarchyCreation(&m);
+
 		auto MVP = P * V * M;
 
-		// Hierarchy chain for the gate
-		for (size_t j = meshes_basic.; j > 0; j--)
-		{
-			M = meshes_basic[j - 1].get_transform().get_transform_matrix() * M;
-		}
+		glUniform1f(eff_basic.get_uniform_location("tex_scale"), m.texture_scale); 
 
 		// Set MVP matrix uniform
 		glUniformMatrix4fv(eff_basic.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
@@ -212,6 +249,45 @@ bool render() {
 		glUniform1i(eff_basic.get_uniform_location("tex"), 0);
 		// Render mesh
 		renderer::render(m);
+	}
+
+	// Render meshes_phong
+
+	for (auto &e : meshes_phong) {
+		auto m = e.second;
+		// Bind effect
+		renderer::bind(eff);
+		// Create MVP matrix
+		auto M = m.get_transform().get_transform_matrix();
+		auto V = cam.get_view();
+		auto P = cam.get_projection();
+		auto MVP = P * V * M;
+		// Set MVP matrix uniform
+		glUniformMatrix4fv(eff.get_uniform_location("MVP"), // Location of uniform
+			1,                               // Number of values - 1 mat4
+			GL_FALSE,                        // Transpose the matrix?
+			value_ptr(MVP));                 // Pointer to matrix data
+
+											 // Set M matrix uniform
+
+		glUniformMatrix4fv(eff.get_uniform_location("M"), 1, GL_FALSE, value_ptr(M));
+
+		// *********************************
+		// Set N matrix uniform - remember - 3x3 matrix
+		glUniformMatrix3fv(eff.get_uniform_location("N"), 1, GL_FALSE, value_ptr(mat3(m.get_transform().get_normal_matrix())));
+		// Bind material
+		renderer::bind(m.get_material(), "mat");
+		// Bind light
+		renderer::bind(light, "light");
+		// Bind texture
+		renderer::bind(tex, 0);
+		// Set tex uniform
+		glUniform1i(eff.get_uniform_location("tex"), 0);
+		// Set eye position - Get this from active camera
+		glUniform3fv(eff.get_uniform_location("eye_pos"), 1, value_ptr(cam.get_position()));
+		// Render mesh
+		renderer::render(m);
+		// *********************************
 	}
 	
 	return true;
