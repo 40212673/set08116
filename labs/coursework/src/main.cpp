@@ -106,6 +106,8 @@ bool load_content() {
 	texs["check"] = texture("textures/check_1.png");
 	texs["gate"] = texture("textures/gate_red.png");
 	texs["pentagram"] = texture("textures/pentagram.png");
+	texs["blood"] = texture("textures/blood.png");
+	texs["blood"] = texture("textures/blood.png");
 	tex_maps["column1"] = &(texs["gate"]);
 	tex_maps["column2"] = &(texs["gate"]);
 	tex_maps["gate_ceiling"] = &(texs["gate"]);
