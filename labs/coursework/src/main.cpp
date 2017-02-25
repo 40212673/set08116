@@ -26,12 +26,13 @@ public:
 	}
 };
 
-map<string, HMesh> meshes_basic, meshes_normal, meshes_phong, meshes_blend;
+map<string, HMesh> meshes_basic, meshes_normal, meshes_phong, meshes_blend, meshes_light;
 effect eff_basic, eff_phong, eff_blend, eff_normal;
 map<string, texture> texs;
 map<string, texture*> tex_maps;
 free_camera cam;
-directional_light light;
+directional_light light, light_lava;
+point_light light_sun;
 double cursor_x = 0.0;
 double cursor_y = 0.0;
 float incrementor_pent = 0.2f;
@@ -95,6 +96,12 @@ bool load_content() {
 	meshes_normal["lava"] = HMesh(geometry_builder::create_plane(29, 25));
 	meshes_normal["lava"].get_transform().translate(vec3(0, 3.4, -29)); 
 
+	// Set up sun and demonic baby cube
+	meshes_light["sun"] = HMesh(geometry_builder::create_sphere(32, 32));
+	meshes_light["sun"].get_transform().scale = vec3(8, 8, 8);
+	meshes_light["sun"].get_transform().rotate(vec3(half_pi<float>(), 0.0f, 0.0f));
+	meshes_light["sun"].get_transform().translate(vec3(80, 80, -40));
+
 	//Set up materials
 	material mat;
 	mat.set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
@@ -112,6 +119,23 @@ bool load_content() {
 		e.second.set_material(mat);
 	}
 
+	mat.set_emissive(vec4(0.4f, 0.0f, 0.0f, 1.0f));
+	mat.set_diffuse(vec4(0.53f, 0.45f, 0.37f, 1.0f));
+	mat.set_specular(vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	mat.set_shininess(25.0f);
+	
+	meshes_normal["lava"].set_material(mat);
+
+	// Set light properties for lava
+	light_lava.set_ambient_intensity(vec4(0.3f, 0.3f, 0.3f, 1.0f));
+	light_lava.set_light_colour(vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	light_lava.set_direction(normalize(vec3(1.0f, 1.0f, 0.0f)));
+
+	// Set light properties for sun
+	light_sun.set_position(vec3(-10.0f, 7.5f, 30.0f));
+	light_sun.set_light_colour(vec4(1));
+	light_sun.set_range(50);
+
 	// Load texture  
 	texs["check"] = texture("textures/check_1.png");
 	texs["gate"] = texture("textures/gate_red.png");
@@ -121,6 +145,7 @@ bool load_content() {
 	texs["blend_map"] = texture("textures/blend_map1.png");
 	texs["lava"] = texture("textures/lava.png");
 	texs["lava_normalmap"] = texture("textures/lava_normalmap.png");
+	texs["sun"] = texture("textures/sun.png"); 
 
 	tex_maps["column1"] = &(texs["gate"]);
 	tex_maps["column2"] = &(texs["gate"]);
@@ -131,6 +156,7 @@ bool load_content() {
 	tex_maps["pentagram2"] = &(texs["pentagram"]);
 	tex_maps["pool"] = &(texs["black_rock"]);
 	tex_maps["lava"] = &(texs["lava"]);
+	tex_maps["sun"] = &(texs["sun"]);
 
 
 	// Load in shaders
@@ -140,8 +166,8 @@ bool load_content() {
 	eff_phong.add_shader("shaders/phong.frag", GL_FRAGMENT_SHADER);
 	eff_blend.add_shader("shaders/blend.vert", GL_VERTEX_SHADER);
 	eff_blend.add_shader("shaders/blend.frag", GL_FRAGMENT_SHADER);
-	eff_normal.add_shader("55_Normal_Mapping/normal.vert", GL_VERTEX_SHADER);
-	eff_normal.add_shader("55_Normal_Mapping/normal.frag", GL_FRAGMENT_SHADER);
+	eff_normal.add_shader("shaders/normal.vert", GL_VERTEX_SHADER);
+	eff_normal.add_shader("shaders/normal.frag", GL_FRAGMENT_SHADER);
 	eff_normal.add_shader("shaders/part_direction.frag", GL_FRAGMENT_SHADER);
 	eff_normal.add_shader("shaders/part_normal_map.frag", GL_FRAGMENT_SHADER);
 
@@ -215,6 +241,10 @@ bool update(float delta_time) {
 
 	// Update the camera
 	cam.update(delta_time);
+
+	// Move lava in pool
+	meshes_normal["lava"].texture_offset += vec2(0.07 * delta_time, 0.05 * delta_time);   
+
 	// Update cursor pos
 	cursor_x = current_x;
 	cursor_y = current_y;
@@ -286,25 +316,31 @@ void renderNormal(HMesh &m)
 	auto P = cam.get_projection();
 	auto MVP = P * V * M;
 	// Set MVP matrix uniform
-	glUniformMatrix4fv(eff_blend.get_uniform_location("MVP"), // Location of uniform
-		1,                               // Number of values - 1 mat4
-		GL_FALSE,                        // Transpose the matrix?
-		value_ptr(MVP));                 // Pointer to matrix data
-
-										 // bind textures
-	renderer::bind(texs["black_rock"], 0);
-	renderer::bind(texs["blood"], 1);
-	renderer::bind(texs["blend_map"], 2);
-
-	// Set the uniform values for textures
-	static int tex_indices[] = { 0, 1 };
-	glUniform1iv(eff_blend.get_uniform_location("tex"), 2, tex_indices);
-	glUniform1i(eff_blend.get_uniform_location("blend"), 2);
+	glUniformMatrix4fv(eff_normal.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
+	// Set M matrix uniform
+	glUniformMatrix4fv(eff_normal.get_uniform_location("M"), 1, GL_FALSE, value_ptr(M));
+	// Set N matrix uniform
+	glUniformMatrix3fv(eff_normal.get_uniform_location("N"), 1, GL_FALSE,
+		value_ptr(m.get_transform().get_normal_matrix()));
 
 	// Set texture offset and scale
-	glUniform1f(eff_blend.get_uniform_location("tex_scale"), m.texture_scale);
-	glUniform2fv(eff_blend.get_uniform_location("texture_offset"), 1, value_ptr(m.texture_offset));
+	glUniform1f(eff_normal.get_uniform_location("tex_scale"), m.texture_scale);
+	glUniform2fv(eff_normal.get_uniform_location("texture_offset"), 1, value_ptr(m.texture_offset));
 
+	// Bind material
+	renderer::bind(m.get_material(), "mat");
+	// Bind light
+	renderer::bind(light, "light");
+	// Bind texture
+	renderer::bind(texs["lava"], 0);
+	// Set tex uniform
+	glUniform1i(eff_normal.get_uniform_location("tex"), 0);
+	// Bind normal_map
+	renderer::bind(texs["lava_normalmap"], 1);
+	// Set normal_map uniform
+	glUniform1i(eff_normal.get_uniform_location("normal_map"), 1);
+	// Set eye position
+	glUniform3fv(eff_normal.get_uniform_location("eye_pos"), 1, value_ptr(cam.get_position()));
 	// Render the mesh
 	renderer::render(m);
 }
@@ -343,7 +379,7 @@ bool render() {
 		// Bind material
 		renderer::bind(m.get_material(), "mat");
 		// Bind light
-		renderer::bind(light, "light");
+		renderer::bind(light_lava, "light");
 		// Bind texture
 		if (tex_maps.count(e.first)) {
 			renderer::bind(*tex_maps[e.first], 0);
@@ -409,38 +445,60 @@ bool render() {
 		// Render mesh
 		renderer::render(m);
 	}
-	
-	
-	// Render meshes_normal
-	for (auto &e : meshes_normal) {
+
+	// Render light source meshes
+	for (auto &e : meshes_light) {
 		auto m = e.second;
 		// Bind effect
-		renderer::bind(eff_basic);
+		renderer::bind(eff_phong);
 		// Create MVP matrix
 		auto M = m.get_transform().get_transform_matrix();
 		auto V = cam.get_view();
 		auto P = cam.get_projection();
 		auto MVP = P * V * M;
-		glUniform1f(eff_basic.get_uniform_location("tex_scale"), m.texture_scale);
-		glUniform2fv(eff_basic.get_uniform_location("texture_offset"), 1, value_ptr(m.texture_offset));
+
+		// Set texture offset and scale
+		glUniform1f(eff_phong.get_uniform_location("tex_scale"), m.texture_scale);
+		glUniform2fv(eff_phong.get_uniform_location("texture_offset"), 1, value_ptr(m.texture_offset));
 
 		// Set MVP matrix uniform
-		glUniformMatrix4fv(eff_basic.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
-		// Bind and set texture 
+		glUniformMatrix4fv(eff_phong.get_uniform_location("MVP"), // Location of uniform
+			1,                               // Number of values - 1 mat4
+			GL_FALSE,                        // Transpose the matrix?
+			value_ptr(MVP));                 // Pointer to matrix data
+
+											 // Set M matrix uniform
+
+		glUniformMatrix4fv(eff_phong.get_uniform_location("M"), 1, GL_FALSE, value_ptr(M));
+
+		// ********************************* 
+		// Set N matrix uniform - remember - 3x3 matrix
+		glUniformMatrix3fv(eff_phong.get_uniform_location("N"), 1, GL_FALSE, value_ptr(m.get_transform().get_normal_matrix()));
+		// Bind material
+		renderer::bind(m.get_material(), "mat");
+		// Bind light
+		renderer::bind(light_sun, "light");
+		// Bind texture
 		if (tex_maps.count(e.first)) {
 			renderer::bind(*tex_maps[e.first], 0);
 		}
 		else {
 			renderer::bind(texs["check"], 0);
 		}
-		glUniform1i(eff_basic.get_uniform_location("tex"), 0);
+		// Set tex uniform
+		glUniform1i(eff_phong.get_uniform_location("tex"), 0);
+		// Set eye position - Get this from active camera
+		glUniform3fv(eff_phong.get_uniform_location("eye_pos"), 1, value_ptr(cam.get_position()));
 		// Render mesh
 		renderer::render(m);
 	}
 	
 	// Render plane blend map
-
 	renderBlend(meshes_blend["plane"]);
+
+	// Render normal mapped lava
+	renderNormal(meshes_normal["lava"]);
+
 
 
 	

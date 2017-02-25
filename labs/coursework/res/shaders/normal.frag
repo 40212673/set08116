@@ -25,7 +25,7 @@ struct material {
 // Forward declarations of used functions
 vec4 calculate_direction(in directional_light light, in material mat, in vec3 normal, in vec3 view_dir,
                          in vec4 tex_colour);
-vec3 calc_normal(in vec3 normal, in vec3 tangent, in vec3 binormal, in sampler2D normal_map, in vec2 tex_coord);
+vec3 calc_normal(in vec3 normal, in vec3 tangent, in vec3 binormal, in sampler2D normal_map, in vec2 tex_coord, in float tex_scale, in vec2 tex_offset);
 
 // Direction light being used in the scene
 uniform directional_light light;
@@ -48,18 +48,20 @@ layout(location = 2) in vec3 transformed_normal;
 layout(location = 3) in vec3 tangent_out;
 // Incoming binormal
 layout(location = 4) in vec3 binormal_out;
-
+// Set texture scaling and offset uniforms
+uniform float tex_scale;
+uniform vec2 texture_offset;
 // Outgoing colour
 layout(location = 0) out vec4 colour;
 
 void main() {
   // *********************************
   // Sample texture
-  vec4 tex_sample = texture(tex, tex_coord_out);
+  vec4 tex_sample = texture(tex, (tex_coord_out * tex_scale) + texture_offset);
   // Calculate view direction
   vec3 view_dir = normalize(eye_pos - vertex_position);
   // Calculate normal from normal map
-  vec3 normie = calc_normal(transformed_normal, tangent_out, binormal_out, normal_map, tex_coord_out);
+  vec3 normie = calc_normal(transformed_normal, tangent_out, binormal_out, normal_map, tex_coord_out, tex_scale, texture_offset);
   // Calculate directional light
   colour = calculate_direction(light, mat, normie, view_dir, tex_sample);
   // *********************************
