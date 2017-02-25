@@ -22,5 +22,5 @@ void main()
 	// Transform the position onto screen
 	gl_Position = MVP * vec4(position, 1.0);
 	// Output texture coordinates
-	tex_coord_out = (tex_coord_in * tex_scale) + texture_offset;;
+	tex_coord_out = (tex_coord_in * tex_scale) + texture_offset;
 } 

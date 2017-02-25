@@ -5,7 +5,7 @@ using namespace std;
 using namespace graphics_framework;
 using namespace glm;
 
-// Class created for ease of Hierarchy chain
+// Class created for ease of Hierarchy chain and setting texture offset and scale
 class HMesh : public mesh
 {
 public:
@@ -27,7 +27,7 @@ public:
 };
 
 map<string, HMesh> meshes_basic, meshes_normal, meshes_phong, meshes_blend;
-effect eff_basic, eff_phong, eff_blend;
+effect eff_basic, eff_phong, eff_blend, eff_normal;
 map<string, texture> texs;
 map<string, texture*> tex_maps;
 free_camera cam;
@@ -92,6 +92,8 @@ bool load_content() {
 	// Set up pool
 	meshes_phong["pool"].get_transform().scale = vec3(20.0f);
 	meshes_phong["pool"].get_transform().translate(vec3(0.0f, -0.01f, -30.0f));
+	meshes_normal["lava"] = HMesh(geometry_builder::create_plane(29, 25));
+	meshes_normal["lava"].get_transform().translate(vec3(0, 3.4, -29)); 
 
 	//Set up materials
 	material mat;
@@ -106,7 +108,7 @@ bool load_content() {
 	mat.set_shininess(100.0f);
 	mat.set_specular(vec4(0.5f, 0.5f, 0.5f, 1.0f));
 	for (auto &e : meshes_basic)
-	{
+	{ 
 		e.second.set_material(mat);
 	}
 
@@ -117,6 +119,9 @@ bool load_content() {
 	texs["blood"] = texture("textures/blood.png");
 	texs["black_rock"] = texture("textures/black_rock.png");
 	texs["blend_map"] = texture("textures/blend_map1.png");
+	texs["lava"] = texture("textures/lava.png");
+	texs["lava_normalmap"] = texture("textures/lava_normalmap.png");
+
 	tex_maps["column1"] = &(texs["gate"]);
 	tex_maps["column2"] = &(texs["gate"]);
 	tex_maps["gate_ceiling"] = &(texs["gate"]);
@@ -125,6 +130,7 @@ bool load_content() {
 	tex_maps["pentagram1"] = &(texs["pentagram"]);
 	tex_maps["pentagram2"] = &(texs["pentagram"]);
 	tex_maps["pool"] = &(texs["black_rock"]);
+	tex_maps["lava"] = &(texs["lava"]);
 
 
 	// Load in shaders
@@ -134,12 +140,17 @@ bool load_content() {
 	eff_phong.add_shader("shaders/phong.frag", GL_FRAGMENT_SHADER);
 	eff_blend.add_shader("shaders/blend.vert", GL_VERTEX_SHADER);
 	eff_blend.add_shader("shaders/blend.frag", GL_FRAGMENT_SHADER);
+	eff_normal.add_shader("55_Normal_Mapping/normal.vert", GL_VERTEX_SHADER);
+	eff_normal.add_shader("55_Normal_Mapping/normal.frag", GL_FRAGMENT_SHADER);
+	eff_normal.add_shader("shaders/part_direction.frag", GL_FRAGMENT_SHADER);
+	eff_normal.add_shader("shaders/part_normal_map.frag", GL_FRAGMENT_SHADER);
 
   
 	// Build effect  
 	eff_basic.build();
 	eff_phong.build();
 	eff_blend.build();
+	eff_normal.build();
 
   
 	// Set camera properties  
@@ -264,6 +275,39 @@ void renderBlend(HMesh &m)
 	renderer::render(m);
 }
 
+void renderNormal(HMesh &m)
+{
+
+	// Bind effect
+	renderer::bind(eff_normal);
+	// Create MVP matrix
+	auto M = m.get_transform().get_transform_matrix();
+	auto V = cam.get_view();
+	auto P = cam.get_projection();
+	auto MVP = P * V * M;
+	// Set MVP matrix uniform
+	glUniformMatrix4fv(eff_blend.get_uniform_location("MVP"), // Location of uniform
+		1,                               // Number of values - 1 mat4
+		GL_FALSE,                        // Transpose the matrix?
+		value_ptr(MVP));                 // Pointer to matrix data
+
+										 // bind textures
+	renderer::bind(texs["black_rock"], 0);
+	renderer::bind(texs["blood"], 1);
+	renderer::bind(texs["blend_map"], 2);
+
+	// Set the uniform values for textures
+	static int tex_indices[] = { 0, 1 };
+	glUniform1iv(eff_blend.get_uniform_location("tex"), 2, tex_indices);
+	glUniform1i(eff_blend.get_uniform_location("blend"), 2);
+
+	// Set texture offset and scale
+	glUniform1f(eff_blend.get_uniform_location("tex_scale"), m.texture_scale);
+	glUniform2fv(eff_blend.get_uniform_location("texture_offset"), 1, value_ptr(m.texture_offset));
+
+	// Render the mesh
+	renderer::render(m);
+}
 
 bool render() {
 
