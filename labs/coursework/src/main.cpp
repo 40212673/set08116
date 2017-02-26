@@ -26,13 +26,13 @@ public:
 	}
 };
 
-map<string, HMesh> meshes_basic, meshes_normal, meshes_phong, meshes_blend, meshes_light;
-effect eff_basic, eff_phong, eff_blend, eff_normal;
+map<string, HMesh> meshes_basic, meshes_normal, meshes_phong, meshes_blend, meshes_glowing, meshes_shadow;
+effect eff_basic, eff_phong, eff_blend, eff_normal, eff_shadow, eff_glowing;
 map<string, texture> texs;
 map<string, texture*> tex_maps;
 free_camera cam;
 directional_light light, light_lava;
-point_light light_sun;
+spot_light light_glowing;
 double cursor_x = 0.0;
 double cursor_y = 0.0;
 float incrementor_pent = 0.2f;
@@ -52,8 +52,8 @@ bool initialise() {
 bool load_content() {
 	
 	//Create Blend plane
-	meshes_blend["plane"] = HMesh(geometry_builder::create_plane());
-	meshes_blend["plane"].texture_scale = 0.1;
+	meshes_phong["plane"] = HMesh(geometry_builder::create_plane());
+	meshes_phong["plane"].texture_scale = 0.1;
 
 	// Create and transform meshes_basic a.k.a the gate
 	meshes_basic["column1"] = HMesh(geometry_builder::create_cylinder(1, 16, vec3(4.0f, 15.0f, 4.0f)));
@@ -96,11 +96,13 @@ bool load_content() {
 	meshes_normal["lava"] = HMesh(geometry_builder::create_plane(29, 25));
 	meshes_normal["lava"].get_transform().translate(vec3(0, 3.4, -29)); 
 
-	// Set up sun and demonic baby cube
-	meshes_light["sun"] = HMesh(geometry_builder::create_sphere(32, 32));
-	meshes_light["sun"].get_transform().scale = vec3(8, 8, 8);
-	meshes_light["sun"].get_transform().rotate(vec3(half_pi<float>(), 0.0f, 0.0f));
-	meshes_light["sun"].get_transform().translate(vec3(80, 80, -40));
+	// Set up sun and demonic baby cube and blend planet
+	meshes_glowing["sun"] = HMesh(geometry_builder::create_sphere(32, 32));
+	meshes_glowing["sun"].get_transform().scale = vec3(8, 8, 8);
+	meshes_glowing["sun"].get_transform().rotate(vec3(half_pi<float>(), 0.0f, 0.0f));
+	meshes_blend["blend_planet"] = meshes_glowing["sun"];
+	//meshes_glowing["sun"].get_transform().translate(vec3(80, 80, -40));
+	meshes_blend["blend_planet"].get_transform().translate(vec3(0, 100, -100));
 
 	//Set up materials
 	material mat;
@@ -126,15 +128,24 @@ bool load_content() {
 	
 	meshes_normal["lava"].set_material(mat);
 
+	mat.set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
+	mat.set_specular(vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	mat.set_shininess(25.0f);
+	mat.set_diffuse(vec4(1.0f, 1.0f, 0.0f, 1.0f));
+
+	meshes_glowing["sun"].set_material(mat);
+
 	// Set light properties for lava
 	light_lava.set_ambient_intensity(vec4(0.3f, 0.3f, 0.3f, 1.0f));
 	light_lava.set_light_colour(vec4(1.0f, 1.0f, 1.0f, 1.0f));
 	light_lava.set_direction(normalize(vec3(1.0f, 1.0f, 0.0f)));
 
 	// Set light properties for sun
-	light_sun.set_position(vec3(-10.0f, 7.5f, 30.0f));
-	light_sun.set_light_colour(vec4(1));
-	light_sun.set_range(50);
+	light_glowing.set_position(vec3(meshes_glowing["sun"].get_transform().position.x, meshes_glowing["sun"].get_transform().position.y, meshes_glowing["sun"].get_transform().position.z));
+	light_glowing.set_light_colour(vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	light_glowing.set_direction(normalize(vec3(0.0f, -1.0f, 0.0f)));
+	light_glowing.set_range(20.0f);
+	light_glowing.set_power(5.0f);
 
 	// Load texture  
 	texs["check"] = texture("textures/check_1.png");
@@ -170,6 +181,8 @@ bool load_content() {
 	eff_normal.add_shader("shaders/normal.frag", GL_FRAGMENT_SHADER);
 	eff_normal.add_shader("shaders/part_direction.frag", GL_FRAGMENT_SHADER);
 	eff_normal.add_shader("shaders/part_normal_map.frag", GL_FRAGMENT_SHADER);
+	eff_glowing.add_shader("shaders/spot.frag", GL_FRAGMENT_SHADER);
+	eff_glowing.add_shader("shaders/spot.vert", GL_VERTEX_SHADER);
 
   
 	// Build effect  
@@ -177,6 +190,7 @@ bool load_content() {
 	eff_phong.build();
 	eff_blend.build();
 	eff_normal.build();
+	eff_glowing.build();
 
   
 	// Set camera properties  
@@ -330,7 +344,7 @@ void renderNormal(HMesh &m)
 	// Bind material
 	renderer::bind(m.get_material(), "mat");
 	// Bind light
-	renderer::bind(light, "light");
+	renderer::bind(light_lava, "light");
 	// Bind texture
 	renderer::bind(texs["lava"], 0);
 	// Set tex uniform
@@ -341,6 +355,41 @@ void renderNormal(HMesh &m)
 	glUniform1i(eff_normal.get_uniform_location("normal_map"), 1);
 	// Set eye position
 	glUniform3fv(eff_normal.get_uniform_location("eye_pos"), 1, value_ptr(cam.get_position()));
+	// Render the mesh
+	renderer::render(m);
+}
+
+void renderGlowing(HMesh &m)
+{
+	// Bind effect
+	renderer::bind(eff_glowing);
+	// Create MVP matrix
+	auto M = m.get_transform().get_transform_matrix();
+	auto V = cam.get_view();
+	auto P = cam.get_projection();
+	auto MVP = P * V * M;
+	// Set MVP matrix uniform
+	glUniformMatrix4fv(eff_glowing.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
+	// Set M matrix uniform
+	glUniformMatrix4fv(eff_glowing.get_uniform_location("M"), 1, GL_FALSE, value_ptr(M));
+	// Set N matrix uniform
+	glUniformMatrix3fv(eff_glowing.get_uniform_location("N"), 1, GL_FALSE,
+		value_ptr(m.get_transform().get_normal_matrix()));
+
+	// Set texture offset and scale
+	//glUniform1f(eff_glowing.get_uniform_location("tex_scale"), m.texture_scale);
+	//glUniform2fv(eff_glowing.get_uniform_location("texture_offset"), 1, value_ptr(m.texture_offset));
+
+	// Bind material
+	renderer::bind(m.get_material(), "mat");
+	// Bind light
+	renderer::bind(light_glowing, "spot");
+	// Bind texture
+	renderer::bind(texs["sun"], 0);
+	// Set tex uniform
+	glUniform1i(eff_glowing.get_uniform_location("tex"), 0);
+	// Set eye position
+	glUniform3fv(eff_glowing.get_uniform_location("eye_pos"), 1, value_ptr(cam.get_position()));
 	// Render the mesh
 	renderer::render(m);
 }
@@ -379,7 +428,7 @@ bool render() {
 		// Bind material
 		renderer::bind(m.get_material(), "mat");
 		// Bind light
-		renderer::bind(light_lava, "light");
+		renderer::bind(light, "light");
 		// Bind texture
 		if (tex_maps.count(e.first)) {
 			renderer::bind(*tex_maps[e.first], 0);
@@ -445,60 +494,16 @@ bool render() {
 		// Render mesh
 		renderer::render(m);
 	}
-
-	// Render light source meshes
-	for (auto &e : meshes_light) {
-		auto m = e.second;
-		// Bind effect
-		renderer::bind(eff_phong);
-		// Create MVP matrix
-		auto M = m.get_transform().get_transform_matrix();
-		auto V = cam.get_view();
-		auto P = cam.get_projection();
-		auto MVP = P * V * M;
-
-		// Set texture offset and scale
-		glUniform1f(eff_phong.get_uniform_location("tex_scale"), m.texture_scale);
-		glUniform2fv(eff_phong.get_uniform_location("texture_offset"), 1, value_ptr(m.texture_offset));
-
-		// Set MVP matrix uniform
-		glUniformMatrix4fv(eff_phong.get_uniform_location("MVP"), // Location of uniform
-			1,                               // Number of values - 1 mat4
-			GL_FALSE,                        // Transpose the matrix?
-			value_ptr(MVP));                 // Pointer to matrix data
-
-											 // Set M matrix uniform
-
-		glUniformMatrix4fv(eff_phong.get_uniform_location("M"), 1, GL_FALSE, value_ptr(M));
-
-		// ********************************* 
-		// Set N matrix uniform - remember - 3x3 matrix
-		glUniformMatrix3fv(eff_phong.get_uniform_location("N"), 1, GL_FALSE, value_ptr(m.get_transform().get_normal_matrix()));
-		// Bind material
-		renderer::bind(m.get_material(), "mat");
-		// Bind light
-		renderer::bind(light_sun, "light");
-		// Bind texture
-		if (tex_maps.count(e.first)) {
-			renderer::bind(*tex_maps[e.first], 0);
-		}
-		else {
-			renderer::bind(texs["check"], 0);
-		}
-		// Set tex uniform
-		glUniform1i(eff_phong.get_uniform_location("tex"), 0);
-		// Set eye position - Get this from active camera
-		glUniform3fv(eff_phong.get_uniform_location("eye_pos"), 1, value_ptr(cam.get_position()));
-		// Render mesh
-		renderer::render(m);
-	}
 	
-	// Render plane blend map
-	renderBlend(meshes_blend["plane"]);
+	// Render planet blend map
+	renderBlend(meshes_blend["blend_planet"]);
 
 	// Render normal mapped lava
 	renderNormal(meshes_normal["lava"]);
 
+	// Render glowing Sun
+
+	renderGlowing(meshes_glowing["sun"]);
 
 
 	
