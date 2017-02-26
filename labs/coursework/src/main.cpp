@@ -32,7 +32,7 @@ map<string, texture> texs;
 map<string, texture*> tex_maps;
 free_camera cam;
 directional_light light, light_lava;
-spot_light light_glowing;
+point_light light_glowing;
 double cursor_x = 0.0;
 double cursor_y = 0.0;
 float incrementor_pent = 0.2f;
@@ -101,8 +101,10 @@ bool load_content() {
 	meshes_glowing["sun"].get_transform().scale = vec3(8, 8, 8);
 	meshes_glowing["sun"].get_transform().rotate(vec3(half_pi<float>(), 0.0f, 0.0f));
 	meshes_blend["blend_planet"] = meshes_glowing["sun"];
-	//meshes_glowing["sun"].get_transform().translate(vec3(80, 80, -40));
+	meshes_glowing["sun"].get_transform().translate(vec3(80, 80, -40));
 	meshes_blend["blend_planet"].get_transform().translate(vec3(0, 100, -100));
+	meshes_glowing["demon_cube"] = HMesh(geometry_builder::create_box(vec3(5.0f,5.0f,5.0f)));
+	meshes_glowing["demon_cube"].get_transform().translate(vec3(-30.0f, 2.5f, -15.0f));
 
 	//Set up materials
 	material mat;
@@ -128,7 +130,7 @@ bool load_content() {
 	
 	meshes_normal["lava"].set_material(mat);
 
-	mat.set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
+	mat.set_emissive(vec4(0.5f, 0.5f, 0.5f, 1.0f));
 	mat.set_specular(vec4(1.0f, 1.0f, 1.0f, 1.0f));
 	mat.set_shininess(25.0f);
 	mat.set_diffuse(vec4(1.0f, 1.0f, 0.0f, 1.0f));
@@ -142,10 +144,8 @@ bool load_content() {
 
 	// Set light properties for sun
 	light_glowing.set_position(vec3(meshes_glowing["sun"].get_transform().position.x, meshes_glowing["sun"].get_transform().position.y, meshes_glowing["sun"].get_transform().position.z));
-	light_glowing.set_light_colour(vec4(1.0f, 1.0f, 1.0f, 1.0f));
-	light_glowing.set_direction(normalize(vec3(0.0f, -1.0f, 0.0f)));
+	light_glowing.set_light_colour(vec4(0.8f, 0.0f, 0.0f, 0.0f));
 	light_glowing.set_range(20.0f);
-	light_glowing.set_power(5.0f);
 
 	// Load texture  
 	texs["check"] = texture("textures/check_1.png");
@@ -156,7 +156,8 @@ bool load_content() {
 	texs["blend_map"] = texture("textures/blend_map1.png");
 	texs["lava"] = texture("textures/lava.png");
 	texs["lava_normalmap"] = texture("textures/lava_normalmap.png");
-	texs["sun"] = texture("textures/sun.png"); 
+	texs["sun"] = texture("textures/sun.png");
+	texs["demon_baby"] = texture("textures/demon_baby.png");
 
 	tex_maps["column1"] = &(texs["gate"]);
 	tex_maps["column2"] = &(texs["gate"]);
@@ -168,6 +169,7 @@ bool load_content() {
 	tex_maps["pool"] = &(texs["black_rock"]);
 	tex_maps["lava"] = &(texs["lava"]);
 	tex_maps["sun"] = &(texs["sun"]);
+	tex_maps["demon_cube"] = &(texs["demon_baby"]);
 
 
 	// Load in shaders
@@ -181,8 +183,8 @@ bool load_content() {
 	eff_normal.add_shader("shaders/normal.frag", GL_FRAGMENT_SHADER);
 	eff_normal.add_shader("shaders/part_direction.frag", GL_FRAGMENT_SHADER);
 	eff_normal.add_shader("shaders/part_normal_map.frag", GL_FRAGMENT_SHADER);
-	eff_glowing.add_shader("shaders/spot.frag", GL_FRAGMENT_SHADER);
-	eff_glowing.add_shader("shaders/spot.vert", GL_VERTEX_SHADER);
+	eff_glowing.add_shader("shaders/point.frag", GL_FRAGMENT_SHADER);
+	eff_glowing.add_shader("shaders/point.vert", GL_VERTEX_SHADER);
 
   
 	// Build effect  
@@ -359,7 +361,7 @@ void renderNormal(HMesh &m)
 	renderer::render(m);
 }
 
-void renderGlowing(HMesh &m)
+void renderGlowing(HMesh &m, string name)
 {
 	// Bind effect
 	renderer::bind(eff_glowing);
@@ -376,16 +378,17 @@ void renderGlowing(HMesh &m)
 	glUniformMatrix3fv(eff_glowing.get_uniform_location("N"), 1, GL_FALSE,
 		value_ptr(m.get_transform().get_normal_matrix()));
 
-	// Set texture offset and scale
-	//glUniform1f(eff_glowing.get_uniform_location("tex_scale"), m.texture_scale);
-	//glUniform2fv(eff_glowing.get_uniform_location("texture_offset"), 1, value_ptr(m.texture_offset));
-
 	// Bind material
 	renderer::bind(m.get_material(), "mat");
 	// Bind light
-	renderer::bind(light_glowing, "spot");
+	renderer::bind(light_glowing, "point");
 	// Bind texture
-	renderer::bind(texs["sun"], 0);
+	if (tex_maps.count(name)) {
+		renderer::bind(*tex_maps[name], 0);
+	}
+	else {
+		renderer::bind(texs["check"], 0);
+	}
 	// Set tex uniform
 	glUniform1i(eff_glowing.get_uniform_location("tex"), 0);
 	// Set eye position
@@ -502,8 +505,22 @@ bool render() {
 	renderNormal(meshes_normal["lava"]);
 
 	// Render glowing Sun
-
-	renderGlowing(meshes_glowing["sun"]);
+	for (auto &e : meshes_glowing) {
+		// Set light position for sun or demon baby
+		if (e.first == "sun")
+		{
+			light_glowing.set_position(vec3(meshes_glowing["sun"].get_transform().position.x,
+				meshes_glowing["sun"].get_transform().position.y,
+				meshes_glowing["sun"].get_transform().position.z));
+		}
+		else
+		{
+			light_glowing.set_position(vec3(meshes_glowing["demon_cube"].get_transform().position.x,
+				meshes_glowing["demon_cube"].get_transform().position.y,
+				meshes_glowing["demon_cube"].get_transform().position.z));
+		}
+		renderGlowing(e.second, e.first);
+	}
 
 
 	
