@@ -27,12 +27,14 @@ public:
 };
 
 map<string, HMesh> meshes_basic, meshes_normal, meshes_phong, meshes_blend, meshes_glowing, meshes_shadow;
-effect eff_basic, eff_phong, eff_blend, eff_normal, eff_shadow, eff_glowing;
+effect eff_basic, eff_phong, eff_blend, eff_normal, eff_shadow, eff_shadow_main, eff_glowing;
 map<string, texture> texs;
 map<string, texture*> tex_maps;
 free_camera cam;
 directional_light light, light_lava;
 point_light light_glowing;
+vector<spot_light> spots(2);
+shadow_map shadow;
 double cursor_x = 0.0;
 double cursor_y = 0.0;
 float incrementor_pent = 0.2f;
@@ -50,10 +52,17 @@ bool initialise() {
 }
 
 bool load_content() {
+
+	// Create shadow map- use screen size
+	shadow = shadow_map(renderer::get_screen_width(), renderer::get_screen_height());
 	
-	//Create Blend plane
-	meshes_phong["plane"] = HMesh(geometry_builder::create_plane());
-	meshes_phong["plane"].texture_scale = 0.1;
+	//Create Shadow objects
+	meshes_shadow["plane"] = HMesh(geometry_builder::create_plane());
+	meshes_shadow["plane"].texture_scale = 0.1;
+	meshes_shadow["demon_teapot"] = HMesh(geometry("objects/teapot.obj"));
+	meshes_shadow["demon_teapot"].get_transform().translate(vec3(-30.0, 0.0, 0.0));
+	meshes_shadow["demon_teapot"].get_transform().scale = vec3(0.1, 0.1, 0.1);
+
 
 	// Create and transform meshes_basic a.k.a the gate
 	meshes_basic["column1"] = HMesh(geometry_builder::create_cylinder(1, 16, vec3(4.0f, 15.0f, 4.0f)));
@@ -101,10 +110,11 @@ bool load_content() {
 	meshes_glowing["sun"].get_transform().scale = vec3(8, 8, 8);
 	meshes_glowing["sun"].get_transform().rotate(vec3(half_pi<float>(), 0.0f, 0.0f));
 	meshes_blend["blend_planet"] = meshes_glowing["sun"];
-	meshes_glowing["sun"].get_transform().translate(vec3(80, 80, -40));
+	meshes_glowing["sun"].get_transform().translate(vec3(140, 40, -20));
 	meshes_blend["blend_planet"].get_transform().translate(vec3(0, 100, -100));
 	meshes_glowing["demon_cube"] = HMesh(geometry_builder::create_box(vec3(5.0f,5.0f,5.0f)));
-	meshes_glowing["demon_cube"].get_transform().translate(vec3(-30.0f, 2.5f, -15.0f));
+	meshes_glowing["demon_cube"].get_transform().translate(vec3(-10.0f, 20.0f, 0.0f));
+	meshes_glowing["demon_cube"].get_transform().rotate(vec3(0.0f, 0.0f, half_pi<float>() / 2.0));
 
 	//Set up materials
 	material mat;
@@ -137,6 +147,14 @@ bool load_content() {
 
 	meshes_glowing["sun"].set_material(mat);
 
+	mat.set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
+	mat.set_specular(vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	mat.set_shininess(25.0f);
+	mat.set_diffuse(vec4(1.0f, 1.0f, 1.0f, 1.0f));
+	meshes_shadow["plane"].set_material(mat);
+	mat.set_diffuse(vec4(1.0f, 0.0f, 0.0f, 1.0f));
+	meshes_shadow["demon_teapot"].set_material(mat);
+
 	// Set light properties for lava
 	light_lava.set_ambient_intensity(vec4(0.3f, 0.3f, 0.3f, 1.0f));
 	light_lava.set_light_colour(vec4(1.0f, 1.0f, 1.0f, 1.0f));
@@ -146,6 +164,13 @@ bool load_content() {
 	light_glowing.set_position(vec3(meshes_glowing["sun"].get_transform().position.x, meshes_glowing["sun"].get_transform().position.y, meshes_glowing["sun"].get_transform().position.z));
 	light_glowing.set_light_colour(vec4(0.8f, 0.0f, 0.0f, 0.0f));
 	light_glowing.set_range(20.0f);
+
+	// Set light properties for demon baby
+	spots[1].set_position(vec3(-10.0f, 20.0f, 0.0f));
+	spots[1].set_light_colour(vec4(1.0f, 0.0f, 0.0f, 1.0f));
+	spots[1].set_direction(normalize(vec3(-1, -1, 0)));
+	spots[1].set_range(500.0f);
+	spots[1].set_power(10.0f);
 
 	// Load texture  
 	texs["check"] = texture("textures/check_1.png");
@@ -185,6 +210,12 @@ bool load_content() {
 	eff_normal.add_shader("shaders/part_normal_map.frag", GL_FRAGMENT_SHADER);
 	eff_glowing.add_shader("shaders/point.frag", GL_FRAGMENT_SHADER);
 	eff_glowing.add_shader("shaders/point.vert", GL_VERTEX_SHADER);
+	eff_shadow_main.add_shader("shaders/shadow.vert", GL_VERTEX_SHADER);
+	vector<string> frag_shaders{ "shaders/shadow.frag", "shaders/part_spot.frag", "shaders/part_shadow.frag" };
+	eff_shadow_main.add_shader(frag_shaders, GL_FRAGMENT_SHADER);
+
+	eff_shadow.add_shader("shaders/spot.vert", GL_VERTEX_SHADER);
+	eff_shadow.add_shader("shaders/spot.frag", GL_FRAGMENT_SHADER);
 
   
 	// Build effect  
@@ -193,12 +224,20 @@ bool load_content() {
 	eff_blend.build();
 	eff_normal.build();
 	eff_glowing.build();
+	eff_shadow_main.build();
+	eff_shadow.build();
 
   
 	// Set camera properties  
 	cam.set_position(vec3(0.0f, 10.0f, 0.0f));  
 	cam.set_target(vec3(0.0f, 0.0f, 0.0f));  
 	cam.set_projection(quarter_pi<float>(), renderer::get_screen_aspect(), 0.1f, 1000.0f);  
+
+	// Update the shadow map light_position from the spot light
+	shadow.light_position = spots[1].get_position();
+	// do the same for light_dir property
+	shadow.light_dir = spots[1].get_direction();
+
 	return true;
 }
 
@@ -397,6 +436,91 @@ void renderGlowing(HMesh &m, string name)
 	renderer::render(m);
 }
 
+void renderShadow(map<string, HMesh> hmeshes)
+{
+	// Set render target to shadow map
+	renderer::set_render_target(shadow);
+	// Clear depth buffer bit
+	glClear(GL_DEPTH_BUFFER_BIT);
+	// Set face cull mode to front
+	glCullFace(GL_FRONT);
+
+	mat4 LightProjectionMat = perspective<float>(90.f, renderer::get_screen_aspect(), 0.1f, 1000.f);
+
+	renderer::bind(eff_shadow);
+	
+	for (auto &e : hmeshes) {
+		auto m = e.second;
+		// Create MVP matrix
+		auto M = m.get_transform().get_transform_matrix();
+		// *********************************
+		// View matrix taken from shadow map
+		auto V = shadow.get_view();
+		// *********************************
+		auto MVP = LightProjectionMat * V * M;
+		// Set MVP matrix uniform
+		glUniformMatrix4fv(eff_shadow.get_uniform_location("MVP"), // Location of uniform
+			1,                                      // Number of values - 1 mat4
+			GL_FALSE,                               // Transpose the matrix?
+			value_ptr(MVP));                        // Pointer to matrix data
+													// Render mesh
+		renderer::render(m);
+	}
+
+	// Set render target back to the screen
+	renderer::set_render_target();
+	// Set face cull mode to back
+	glCullFace(GL_BACK);
+	// Bind shader
+	renderer::bind(eff_shadow_main);
+
+
+	for (auto &e : hmeshes) {
+		auto m = e.second;
+		// Create MVP matrix
+		auto M = m.get_transform().get_transform_matrix();
+		auto V = cam.get_view();
+		auto P = cam.get_projection();
+		auto MVP = P * V * M;
+		// Set MVP matrix uniform
+		glUniformMatrix4fv(eff_shadow_main.get_uniform_location("MVP"), // Location of uniform
+			1,                                    // Number of values - 1 mat4
+			GL_FALSE,                             // Transpose the matrix?
+			value_ptr(MVP));                      // Pointer to matrix data
+												  // Set M matrix uniform
+		glUniformMatrix4fv(eff_shadow_main.get_uniform_location("M"), 1, GL_FALSE, value_ptr(M));
+		// Set N matrix uniform
+		glUniformMatrix3fv(eff_shadow_main.get_uniform_location("N"), 1, GL_FALSE,
+			value_ptr(m.get_transform().get_normal_matrix()));
+		// *********************************
+		// Set lightMVP uniform, using:
+		//Model matrix from m
+		auto lM = m.get_transform().get_transform_matrix();
+		// viewmatrix from the shadow map
+		auto lV = shadow.get_view();
+		// Multiply together with LightProjectionMat
+		auto lightMVP = LightProjectionMat * lV * lM;
+		// Set uniform
+		glUniformMatrix4fv(eff_shadow_main.get_uniform_location("lightMVP"), 1, GL_FALSE, value_ptr(lightMVP));
+		// Bind material
+		renderer::bind(m.get_material(), "mat");
+		// Bind spot light
+		renderer::bind(spots[1], "spot");
+		// Bind texture
+		renderer::bind(texs["black_rock"], 0);
+		// Set tex uniform 
+		glUniform1i(eff_shadow_main.get_uniform_location("tex"), 0);
+		// Set eye position
+		glUniform3fv(eff_shadow_main.get_uniform_location("eye_pos"), 1, value_ptr(cam.get_position()));
+		// Bind shadow map texture - use texture unit 1
+		renderer::bind(shadow.buffer->get_depth(), 1);
+		// Set the shadow_map uniform
+		glUniform1i(eff_shadow_main.get_uniform_location("shadow_map"), 1);
+		// Render mesh
+		renderer::render(m);
+	}
+}
+
 bool render() {
 
 	// Render meshes_phong pentagrams
@@ -522,6 +646,8 @@ bool render() {
 		renderGlowing(e.second, e.first);
 	}
 
+	// Render teapot and plane shadows
+	renderShadow(meshes_shadow);
 
 	
 	return true;
