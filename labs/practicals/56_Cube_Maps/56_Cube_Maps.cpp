@@ -14,22 +14,22 @@ bool load_content() {
   // Create a sphere
   sphere = mesh(geometry_builder::create_sphere(25, 25));
 
-  array<string, 6> filenames = {"textures/sahara_ft.jpg", "textures/sahara_bk.jpg", "textures/sahara_up.jpg",
-                                "textures/sahara_dn.jpg", "textures/sahara_rt.jpg", "textures/sahara_lf.jpg"};
+  array<string, 6> filenames = {"textures/check_1.png", "textures/check_2.png", "textures/check_3.png",
+                                "textures/check_4.png", "textures/check_5.png", "textures/check_6.png"};
   // *********************************
   // Create cube_map
-
+  cube_map = cubemap(filenames);
   // Load in shaders
-
-
+  eff.add_shader("56_Cube_Maps/shader.vert", GL_VERTEX_SHADER);
+  eff.add_shader("56_Cube_Maps/shader.frag", GL_FRAGMENT_SHADER);
   // Build effect
-
+  eff.build();
   // *********************************
 
   // Set camera properties
   cam.set_position(vec3(0.0f, 10.0f, 10.0f));
   cam.set_target(vec3(0.0f, 0.0f, 0.0f));
-  cam.set_projection(quarter_pi<float>(), renderer::get_screen_aspect(), 0.1f, 1000.0f);
+  cam.set_projection(quarter_pi<float>(), renderer::get_screen_aspect(), 0.1f, 1000.0f); 
   return true;
 }
 
