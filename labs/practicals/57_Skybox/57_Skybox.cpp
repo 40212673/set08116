@@ -72,10 +72,10 @@ bool render() {
 	auto P = cam.get_projection();
 	auto MVP = P * V * M;
   // Set MVP matrix uniform
-	glUniformMatrix4fv(eff.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
+	glUniformMatrix4fv(sky_eff.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
   // Set cubemap uniform
-	renderer::bind(cube_map, 0);
-	glUniform1i(eff.get_uniform_location("cubemap"), 0);
+	//renderer::bind(cube_map, 0);
+	glUniform1i(sky_eff.get_uniform_location("cubemap"), 0);
   // Render skybox
 	renderer::render(skybox);
   // Enable depth test,depth mask,face culling
