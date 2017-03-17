@@ -29,8 +29,8 @@ bool load_content() {
   // Load in tarnish texture
 	tarnish = texture("textures/tarnish.jpg");
   // Load in environment map shader
-	eff.add_shader("58_Environment_Maps/env_map.vert", GL_VERTEX_SHADER);
-	eff.add_shader("58_Environment_Maps/env_map.frag", GL_FRAGMENT_SHADER);
+	eff.add_shader("59_Tarnished_Object/tarnish.vert", GL_VERTEX_SHADER);
+	eff.add_shader("59_Tarnished_Object/tarnish.frag", GL_FRAGMENT_SHADER);
   // Build effect
 	eff.build();
   // Load in skybox effect

@@ -44,7 +44,7 @@ void generate_terrain(geometry &geom, const texture &height_map, unsigned int wi
     for (int z = 0; z < height_map.get_height(); ++z) {
       // *********************************
       // Calculate z position of point
-
+		point.z = (depth_point * z) - (depth / 2);
       // *********************************
       // Y position based on red component of height map data
       point.y = data[(z * height_map.get_width()) + x].y * height_scale;
@@ -60,8 +60,8 @@ void generate_terrain(geometry &geom, const texture &height_map, unsigned int wi
       unsigned int top_left = (y * height_map.get_width()) + x;
       unsigned int top_right = (y * height_map.get_width()) + x + 1;
       // *********************************
-
-
+	  unsigned int bottom_left = ((y + 1) * height_map.get_width()) + x;
+	  unsigned int bottom_right = ((y + 1) * height_map.get_height()) + x + 1;
       // *********************************
       // Push back indices for triangle 1 (tl,br,bl)
       indices.push_back(top_left);
@@ -69,9 +69,9 @@ void generate_terrain(geometry &geom, const texture &height_map, unsigned int wi
       indices.push_back(bottom_left);
       // Push back indices for triangle 2 (tl,tr,br)
       // *********************************
-
-
-
+	  indices.push_back(top_left);
+	  indices.push_back(top_right);
+	  indices.push_back(bottom_right);
       // *********************************
     }
   }
@@ -92,19 +92,19 @@ void generate_terrain(geometry &geom, const texture &height_map, unsigned int wi
 
     // Normal is normal(cross product) of these two sides
     // *********************************
-
+	auto n = normalize(cross(side2, side1));
 
     // Add to normals in the normal buffer using the indices for the triangle
-
-
-
+	normals[idx1] = normals[idx1] + n;
+	normals[idx2] = normals[idx2] + n;
+	normals[idx3] = normals[idx3] + n;
     // *********************************
   }
 
   // Normalize all the normals
   for (auto &n : normals) {
     // *********************************
-
+	  normalize(n);
     // *********************************
   }
 
@@ -126,26 +126,26 @@ void generate_terrain(geometry &geom, const texture &height_map, unsigned int wi
 
       // *********************************
       // Sum the components of the vector
-
+	  auto total = tex_weight.x + tex_weight.y + tex_weight.z + tex_weight.w;
       // Divide weight by sum
-
+	  tex_weight /= total;
       // Add tex weight to weights
-
-      // *********************************
+	  tex_weights.push_back(tex_weight);
+      // ********************************* 
     }
   }
 
-  // Add necessary buffers to the geometry
+  // Add necessary buffers to the geometry 
   geom.add_buffer(positions, BUFFER_INDEXES::POSITION_BUFFER);
   geom.add_buffer(normals, BUFFER_INDEXES::NORMAL_BUFFER);
   geom.add_buffer(tex_coords, BUFFER_INDEXES::TEXTURE_COORDS_0);
-  geom.add_buffer(tex_weights, BUFFER_INDEXES::TEXTURE_COORDS_1);
+  geom.add_buffer(tex_weights, BUFFER_INDEXES::TEXTURE_COORDS_1); 
   geom.add_index_buffer(indices);
 
   // Delete data
   delete[] data;
 }
-
+ 
 bool load_content() {
   // Geometry to load into
   geometry geom;
@@ -168,12 +168,12 @@ bool load_content() {
   eff.build();
 
   // Material definitions
-  light.set_ambient_intensity(vec4(0.3f, 0.3f, 0.3f, 1.0f));
+  light.set_ambient_intensity(vec4(0.01f, 0.01f, 0.01f, 1.0f));
   light.set_light_colour(vec4(0.9f, 0.9f, 0.9f, 1.0f));
   light.set_direction(normalize(vec3(1.0f, 1.0f, 1.0f)));
-  terr.get_material().set_diffuse(vec4(0.5f, 0.5f, 0.5f, 1.0f));
+  terr.get_material().set_diffuse(vec4(0.2f, 0.2f, 0.2f, 1.0f));
   terr.get_material().set_specular(vec4(0.0f, 0.0f, 0.0f, 1.0f));
-  terr.get_material().set_shininess(20.0f);
+  terr.get_material().set_shininess(5.0f);
   terr.get_material().set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
 
   // terrian trextures
@@ -249,7 +249,7 @@ bool render() {
   glUniformMatrix3fv(eff.get_uniform_location("N"), 1, GL_FALSE, value_ptr(terr.get_transform().get_normal_matrix()));
   // *********************************
   // Set eye_pos uniform to camera position
-
+  glUniform3fv(eff.get_uniform_location("eye_pos"), 1, value_ptr(cam.get_position()));
   // *********************************
    //Bind Terrian Material
   renderer::bind(terr.get_material(), "mat");
@@ -260,14 +260,14 @@ bool render() {
   glUniform1i(eff.get_uniform_location("tex[0]"), 0);
   // *********************************
    //Bind Tex[1] to TU 1, set uniform
-
-
+  renderer::bind(tex[1], 1);
+  glUniform1i(eff.get_uniform_location("tex[1]"), 1);
   // Bind Tex[2] to TU 2, set uniform
-
-
+  renderer::bind(tex[2], 2);
+  glUniform1i(eff.get_uniform_location("tex[2]"), 2);
   // Bind Tex[3] to TU 3, set uniform
-
-
+  renderer::bind(tex[3], 3);
+  glUniform1i(eff.get_uniform_location("tex[3]"), 3);
   // *********************************
   // Render terrain
   renderer::render(terr);

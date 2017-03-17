@@ -23,9 +23,9 @@ bool load_content() {
 
   // *********************************
   // Load in shaders
-
-
-
+  eff.add_shader("62_Geometry_Shader/shader.vert", GL_VERTEX_SHADER);
+  eff.add_shader("62_Geometry_Shader/shader.frag", GL_FRAGMENT_SHADER); 
+  eff.add_shader("62_Geometry_Shader/shader.geom", GL_GEOMETRY_SHADER);
   // *********************************
 
   // Build effect
@@ -54,9 +54,13 @@ bool render() {
   auto MVP = P * V * M;
   // *********************************
   // Set MVP matrix uniform
-
+  glUniformMatrix4fv(
+	  eff.get_uniform_location("MVP"), // Location of uniform
+	  1, // Number of values - 1 mat4
+	  GL_FALSE, // Transpose the matrix?
+	  value_ptr(MVP)); // Pointer to matrix data
   // Set offset to (5.0f, 0.0f, 0.0f)
-
+  glUniform3fv(eff.get_uniform_location("offset"), 1, value_ptr(vec3(5.0f, 0.0f, 0.0f)));
   // *********************************
 
   // Render geometry
