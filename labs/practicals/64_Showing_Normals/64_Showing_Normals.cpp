@@ -14,7 +14,7 @@ directional_light light;
 
 bool load_content() {
   // Create plane mesh
-  meshes["plane"] = mesh(geometry_builder::create_plane());
+  meshes["plane"] = mesh(geometry_builder::create_plane(200, 200, true));  
 
   // Create scene
   meshes["box"] = mesh(geometry_builder::create_box());
