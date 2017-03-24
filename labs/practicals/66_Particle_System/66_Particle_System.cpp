@@ -78,17 +78,17 @@ bool load_content() {
   glGenBuffers(2, particle_buffers_vbo);
   // *********************************
   // Place initial particle data in buffer 1
-
-
-
+  glBindBuffer(GL_ARRAY_BUFFER, particle_buffers_vbo[0]);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(particle) * MAX_PARTICLES, particles, GL_DYNAMIC_DRAW);
   // Fill space with blank data in buffer 2
-
-
+  glBindBuffer(GL_ARRAY_BUFFER, particle_buffers_vbo[1]);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(particle) * MAX_PARTICLES, particles, GL_DYNAMIC_DRAW);
 
   // generate our feedback objects
-
+  glGenTransformFeedbacks(2, transform_feedbacks);
   // link fb[0] to vbo[1]
-
+  glBindTransformFeedback(GL_TRANSFORM_FEEDBACK, transform_feedbacks[0]);
+  glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, particle_buffers_vbo[1]);
 
   // *********************************
   // link fb[1] to vbo[0]
@@ -117,6 +117,8 @@ bool update(float delta_time) {
 void render_feeback() {
   static bool first_frame = true;
   renderer::bind(particle_eff);
+
+  glPointSize(0.1f);
 
   // Close down the output
   glEnable(GL_RASTERIZER_DISCARD);
@@ -180,8 +182,8 @@ bool render() {
 
   // *********************************
   // Swap front and back buffers
-
-
+  front_buf = back_buf;
+  back_buf = (back_buf + 1)%2;
   // *********************************
   return true;
 }

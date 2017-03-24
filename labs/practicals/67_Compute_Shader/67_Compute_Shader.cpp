@@ -7,7 +7,7 @@ using namespace graphics_framework;
 using namespace glm;
 
 // Maximum number of particles
-const unsigned int MAX_PARTICLES = 2 << 11;
+const unsigned int MAX_PARTICLES = 2 << 15;
 
 vec4 positions[MAX_PARTICLES];
 vec4 velocitys[MAX_PARTICLES];
@@ -43,18 +43,18 @@ bool load_content() {
   glBindVertexArray(vao);
   // *********************************
    //Generate Position Data buffer
-
+  glGenBuffers(1, &G_Position_buffer);
   // Bind as GL_SHADER_STORAGE_BUFFER
-
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, G_Position_buffer);
   // Send Data to GPU, use GL_DYNAMIC_DRAW
-
+  glBufferData(GL_SHADER_STORAGE_BUFFER, MAX_PARTICLES * sizeof(vec4), positions, GL_DYNAMIC_DRAW);
 
   // Generate Velocity Data buffer
-
-  // Bind as GL_SHADER_STORAGE_BUFFER
-
+  glGenBuffers(1, &G_Velocity_buffer);
+  // Bind as GL_SHADER_STORAGE_BUFFER 
+  glBindBuffer(GL_SHADER_STORAGE_BUFFER, G_Velocity_buffer);
   // Send Data to GPU, use GL_DYNAMIC_DRAW
-
+  glBufferData(GL_SHADER_STORAGE_BUFFER, MAX_PARTICLES * sizeof(vec4), velocitys, GL_DYNAMIC_DRAW);
   // *********************************
    //Unbind
   glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
