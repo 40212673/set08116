@@ -202,7 +202,7 @@ bool render() {
   // Set inverse height Uniform
   glUniform1f(tex_eff.get_uniform_location("inverse_height"), 1.0 / renderer::get_screen_height());
   // Render the screen quad
-  renderer::render(screen_quad);
+  renderer::render(screen_quad); 
   // *********************************
 
   return true;
