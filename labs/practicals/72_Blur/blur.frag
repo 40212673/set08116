@@ -39,16 +39,16 @@ void main() {
   // Start with colour as black
   vec4 start_colour = vec4(0.0, 0.0, 0.0, 1.0);
   // Loop through each sample vector
-  for (int i = 0; i < 7; i++)
+  for (int i = 0; i < 4; i++)
   {
     // Calculate tex coord to sample
-	vec2 uv = tex_coord + vec2(gauBlurA[i].x * inverse_width, gauBlurA[i].y * inverse_height);
+	vec2 uv = tex_coord + vec2(samples[i].x * inverse_width, samples[i].y * inverse_height);
     // Sample the texture and scale appropriately
     // - scale factor stored in w component
-	vec4 sample_tex = texture(tex, uv) * gauBlurA[i].w; 
+	vec4 sample_tex = texture(tex, uv) * samples[i].w; 
 	start_colour += sample_tex;
   }
-
+  /*
   for (int i = 0; i < 7; i++)
   {
     // Calculate tex coord to sample
@@ -58,6 +58,7 @@ void main() {
 	vec4 sample_tex = texture(tex, uv) * gauBlurB[i].w; 
 	start_colour += sample_tex;
   }
+  */
   // Ensure alpha is 1.0
   colour = start_colour;
   colour.a = 1.0;

@@ -21,14 +21,15 @@ layout(location = 0) out vec4 colour;
 void main() {
   // *********************************
   // Sample sharp texture
-
+  vec4 sharpTexture = texture(sharp, tex_coord);
   // Sample blur texture
-
+  vec4 blurTexture = texture(tex, tex_coord); 
   // Calculate distance from the camera - based on depth sample
-
+  vec4 depthTexture = texture(depth, tex_coord);
+  float dist = depthTexture.z;
   // Mix samples together based on distance
-
+  colour = mix(sharpTexture, blurTexture, dist);
   // Ensure alpha is 1.0
-
+  colour.a = 1.0;
   // *********************************
 }
