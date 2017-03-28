@@ -26,8 +26,8 @@ public:
 	}
 };
 
-map<string, HMesh> meshes_gate, meshes_normal, meshes_phong, meshes_blend, meshes_glowing, meshes_shadow;
-effect eff_basic, eff_phong, eff_blend, eff_normal, eff_shadow, eff_shadow_main, eff_glowing;
+map<string, HMesh> meshes_gate, meshes_normal, meshes_phong, meshes_blend, meshes_glowing, meshes_shadow, meshes_skybox;
+effect eff_basic, eff_phong, eff_blend, eff_normal, eff_shadow, eff_shadow_main, eff_glowing, sky_eff;
 map<string, texture> texs;
 map<string, texture*> tex_maps;
 free_camera free_cam;
@@ -36,6 +36,7 @@ directional_light light, light_lava;
 point_light light_glowing;
 spot_light spot;
 shadow_map shadow;
+cubemap cube_map;
 bool setFree = true;
 double cursor_x = 0.0;
 double cursor_y = 0.0;
@@ -76,6 +77,10 @@ void createMeshes()
 	meshes_gate["horn1"].parent = &meshes_gate["gate_ceiling"];
 	meshes_gate["horn2"] = meshes_gate["horn1"];
 	meshes_gate["horn2"].parent = &meshes_gate["horn1"];
+
+	// Create the Skybox
+	meshes_skybox["skybox"] = HMesh(geometry_builder::create_box());
+	meshes_skybox["skybox"].get_transform().scale *= 1000;
 
 
 	// Build gate
@@ -187,6 +192,11 @@ void setLight()
 // Function to load textures
 void loadTextures()
 {
+	// Load Cubemap
+	array<string, 6> filenames = { "textures/purplenebula_ft.tga", "textures/purplenebula_bk.tga", "textures/purplenebula_up.tga",
+		"textures/purplenebula_dn.tga", "textures/purplenebula_rt.tga", "textures/purplenebula_lf.tga" };
+	cube_map = cubemap(filenames);
+
 	// texs contains all the used texture
 	texs["check"] = texture("textures/check_1.png");
 	texs["gate"] = texture("textures/gate_red.png");
@@ -198,6 +208,7 @@ void loadTextures()
 	texs["lava_normalmap"] = texture("textures/lava_normalmap.png");
 	texs["sun"] = texture("textures/sun.png");
 	texs["demon_baby"] = texture("textures/demon_baby.png");
+
 	// tex_maps points to texturesin texs to reuse textures in some instances
 	tex_maps["column1"] = &(texs["gate"]);
 	tex_maps["column2"] = &(texs["gate"]);
@@ -232,6 +243,9 @@ void loadBuildEffects()
 	vector<string> frag_shaders{ "shaders/shadow.frag", "shaders/part_spot.frag", "shaders/part_shadow.frag" };
 	eff_shadow_main.add_shader(frag_shaders, GL_FRAGMENT_SHADER);
 
+	sky_eff.add_shader("shaders/skybox.vert", GL_VERTEX_SHADER);
+	sky_eff.add_shader("shaders/skybox.frag", GL_FRAGMENT_SHADER);
+
 	eff_shadow.add_shader("shaders/spot.vert", GL_VERTEX_SHADER);
 	eff_shadow.add_shader("shaders/spot.frag", GL_FRAGMENT_SHADER);
 
@@ -244,6 +258,7 @@ void loadBuildEffects()
 	eff_glowing.build();
 	eff_shadow_main.build();
 	eff_shadow.build();
+	sky_eff.build();
 }
 
 // Function to set up cameras
@@ -400,6 +415,46 @@ mat4 hierarchyCreation (HMesh *m)
 	
 	return M;
 }
+
+// SkyBox
+void renderSkybox()
+{
+	// Disable depth test,depth mask,face culling
+	glDisable(GL_DEPTH_TEST);
+	glDepthMask(GL_FALSE);
+	glDisable(GL_CULL_FACE);
+	// Bind skybox effect
+	renderer::bind(sky_eff);
+	// Create MVP Matrix
+	mat4 V;
+	mat4 P;
+	// Calculate MVP for the skybox
+	auto M = meshes_skybox["skybox"].get_transform().get_transform_matrix();
+	if (setFree)
+	{
+		V = free_cam.get_view();
+		P = free_cam.get_projection();
+	}
+	else
+	{
+		V = arc_cam.get_view();
+		P = arc_cam.get_projection();
+	}
+	auto MVP = P * V * M;
+	// Set MVP matrix uniform
+	glUniformMatrix4fv(sky_eff.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
+	// Set cubemap uniform
+	renderer::bind(cube_map, 0);
+	glUniform1i(sky_eff.get_uniform_location("cubemap"), 0);
+	// Render skybox
+	renderer::render(meshes_skybox["skybox"]);
+	// Enable depth test,depth mask,face culling
+	glEnable(GL_DEPTH_TEST);
+	glDepthMask(GL_TRUE);
+	glEnable(GL_CULL_FACE);
+}
+
+
 // Pentagrams and pool
 void renderPhong(HMesh &m, string name)
 {
@@ -456,6 +511,7 @@ void renderPhong(HMesh &m, string name)
 // Build Gate
 void renderPhongGate(HMesh &m, string name)
 {
+
 	// Bind effect
 	renderer::bind(eff_phong);
 	// Create MVP Matrix
@@ -473,7 +529,7 @@ void renderPhongGate(HMesh &m, string name)
 		P = arc_cam.get_projection();
 	}
 	// Hierarchy chain for the gate
-	mat4 M = hierarchyCreation(&m);
+	auto M = hierarchyCreation(&m);
 
 	auto MVP = P * V * M;
 
@@ -756,6 +812,9 @@ void renderShadow(map<string, HMesh> hmeshes)
 
 bool render() {
 
+	//Render Skybox
+	renderSkybox();
+
 	// Render meshes_phong pentagrams
 	for (auto &e : meshes_phong) {
 		auto m = e.second;
@@ -767,10 +826,9 @@ bool render() {
 		auto m = e.second;
 		renderPhongGate(m, e.first);
 	}
-	
+
 	// Render planet blend map a.k.a the planet
 	renderBlend(meshes_blend["blend_planet"]);
-
 	// Render normal mapped lava
 	renderNormal(meshes_normal["lava"]);
 
