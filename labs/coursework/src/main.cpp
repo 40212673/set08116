@@ -26,8 +26,8 @@ public:
 	}
 };
 
-map<string, HMesh> meshes_gate, meshes_normal, meshes_phong, meshes_blend, meshes_glowing, meshes_shadow, meshes_skybox;
-effect eff_basic, eff_phong, eff_blend, eff_normal, eff_shadow, eff_shadow_main, eff_glowing, sky_eff;
+map<string, HMesh> meshes_gate, meshes_normal, meshes_phong, meshes_blend, meshes_glowing, meshes_shadow, meshes_skybox, meshes_ground;
+effect eff_basic, eff_phong, eff_blend, eff_normal, eff_shadow, eff_shadow_main, eff_glowing, sky_eff, ground_eff;
 map<string, texture> texs;
 map<string, texture*> tex_maps;
 free_camera free_cam;
@@ -55,7 +55,6 @@ void createMeshes()
 {
 	// Create shadow map- use screen size
 	shadow = shadow_map(renderer::get_screen_width(), renderer::get_screen_height());
-
 
 	//Create Shadow objects
 	meshes_shadow["plane"] = HMesh(geometry_builder::create_plane());
@@ -92,7 +91,6 @@ void createMeshes()
 
 
 	// Set up Pentagrams for Phong
-
 	meshes_phong["pentagram1"] = HMesh(geometry_builder::create_cylinder(1, 64, vec3(10.0f, 0.05f, 10.0f)));
 	meshes_phong["pentagram1"].texture_scale = 0.1;
 	meshes_phong["pool"] = HMesh(geometry("objects/pool.obj"));	
@@ -160,6 +158,11 @@ void setUpMaterials()
 	meshes_shadow["plane"].set_material(mat);
 	mat.set_diffuse(vec4(1.0f, 0.0f, 0.0f, 1.0f));
 	meshes_shadow["demon_teapot"].set_material(mat);
+
+	meshes_ground["terrain"].get_material().set_diffuse(vec4(0.2f, 0.2f, 0.2f, 1.0f));
+	meshes_ground["terrain"].get_material().set_specular(vec4(0.0f, 0.0f, 0.0f, 1.0f));
+	meshes_ground["terrain"].get_material().set_shininess(5.0f);
+	meshes_ground["terrain"].get_material().set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
 }
 
 // Function to set light properties
@@ -208,6 +211,9 @@ void loadTextures()
 	texs["lava_normalmap"] = texture("textures/lava_normalmap.png");
 	texs["sun"] = texture("textures/sun.png");
 	texs["demon_baby"] = texture("textures/demon_baby.png");
+	texs["ground_heightmap"] = texture("textures/heightmap.jpg");
+	texs["sand"] = texture("textures/sand.jpg");
+	texs["stone"] = texture("textures/stone.jpg");
 
 	// tex_maps points to texturesin texs to reuse textures in some instances
 	tex_maps["column1"] = &(texs["gate"]);
@@ -249,6 +255,9 @@ void loadBuildEffects()
 	eff_shadow.add_shader("shaders/spot.vert", GL_VERTEX_SHADER);
 	eff_shadow.add_shader("shaders/spot.frag", GL_FRAGMENT_SHADER);
 
+	ground_eff.add_shader("shaders/terrain.frag", GL_FRAGMENT_SHADER);
+	ground_eff.add_shader("shaders/part_direction.frag", GL_FRAGMENT_SHADER);
+	ground_eff.add_shader("shaders/part_weighted_texture_4.frag", GL_FRAGMENT_SHADER);
 
 	// Build effect  
 	eff_basic.build();
@@ -259,6 +268,7 @@ void loadBuildEffects()
 	eff_shadow_main.build();
 	eff_shadow.build();
 	sky_eff.build();
+	ground_eff.build();
 }
 
 // Function to set up cameras
@@ -274,11 +284,151 @@ void setCameras()
 	arc_cam.set_distance(20);
 }
 
+// Terrain generation
+void generate_terrain(geometry &geom, const texture &height_map, unsigned int width, unsigned int depth,
+	float height_scale) {
+	// Contains our position data
+	vector<vec3> positions;
+	// Contains our normal data
+	vector<vec3> normals;
+	// Contains our texture coordinate data
+	vector<vec2> tex_coords;
+	// Contains our texture weights
+	vector<vec4> tex_weights;
+	// Contains our index data
+	vector<unsigned int> indices;
+
+	// Extract the texture data from the image
+	glBindTexture(GL_TEXTURE_2D, height_map.get_id());
+	auto data = new vec4[height_map.get_width() * height_map.get_height()];
+	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, (void *)data);
+
+	// Determine ratio of height map to geometry
+	float width_point = static_cast<float>(width) / static_cast<float>(height_map.get_width());
+	float depth_point = static_cast<float>(depth) / static_cast<float>(height_map.get_height());
+
+	// Point to work on
+	vec3 point;
+
+	// Part 1 - Iterate through each point, calculate vertex and add to vector
+	for (int x = 0; x < height_map.get_width(); ++x) {
+		// Calculate x position of point
+		point.x = -(width / 2.0f) + (width_point * static_cast<float>(x));
+
+		for (int z = 0; z < height_map.get_height(); ++z) {
+			// *********************************
+			// Calculate z position of point
+			point.z = (depth_point * z) - (depth / 2);
+			// *********************************
+			// Y position based on red component of height map data
+			point.y = data[(z * height_map.get_width()) + x].y * height_scale;
+			// Add point to position data
+			positions.push_back(point);
+		}
+	}
+
+	// Part 1 - Add index data
+	for (unsigned int x = 0; x < height_map.get_width() - 1; ++x) {
+		for (unsigned int y = 0; y < height_map.get_height() - 1; ++y) {
+			// Get four corners of patch
+			unsigned int top_left = (y * height_map.get_width()) + x;
+			unsigned int top_right = (y * height_map.get_width()) + x + 1;
+			// *********************************
+			unsigned int bottom_left = ((y + 1) * height_map.get_width()) + x;
+			unsigned int bottom_right = ((y + 1) * height_map.get_height()) + x + 1;
+			// *********************************
+			// Push back indices for triangle 1 (tl,br,bl)
+			indices.push_back(top_left);
+			indices.push_back(bottom_right);
+			indices.push_back(bottom_left);
+			// Push back indices for triangle 2 (tl,tr,br)
+			// *********************************
+			indices.push_back(top_left);
+			indices.push_back(top_right);
+			indices.push_back(bottom_right);
+			// *********************************
+		}
+	}
+
+	// Resize the normals buffer
+	normals.resize(positions.size());
+
+	// Part 2 - Calculate normals for the height map
+	for (unsigned int i = 0; i < indices.size() / 3; ++i) {
+		// Get indices for the triangle
+		auto idx1 = indices[i * 3];
+		auto idx2 = indices[i * 3 + 1];
+		auto idx3 = indices[i * 3 + 2];
+
+		// Calculate two sides of the triangle
+		vec3 side1 = positions[idx1] - positions[idx3];
+		vec3 side2 = positions[idx1] - positions[idx2];
+
+		// Normal is normal(cross product) of these two sides
+		// *********************************
+		auto n = normalize(cross(side2, side1));
+
+		// Add to normals in the normal buffer using the indices for the triangle
+		normals[idx1] = normals[idx1] + n;
+		normals[idx2] = normals[idx2] + n;
+		normals[idx3] = normals[idx3] + n;
+		// *********************************
+	}
+
+	// Normalize all the normals
+	for (auto &n : normals) {
+		// *********************************
+		normalize(n);
+		// *********************************
+	}
+
+	// Part 3 - Add texture coordinates for geometry
+	for (unsigned int x = 0; x < height_map.get_width(); ++x) {
+		for (unsigned int z = 0; z < height_map.get_height(); ++z) {
+			tex_coords.push_back(vec2(width_point * x, depth_point * z));
+		}
+	}
+
+	// Part 4 - Calculate texture weights for each vertex
+	for (unsigned int x = 0; x < height_map.get_width(); ++x) {
+		for (unsigned int z = 0; z < height_map.get_height(); ++z) {
+			// Calculate tex weight
+			vec4 tex_weight(clamp(1.0f - abs(data[(height_map.get_width() * z) + x].y - 0.0f) / 0.25f, 0.0f, 1.0f),
+				clamp(1.0f - abs(data[(height_map.get_width() * z) + x].y - 0.15f) / 0.25f, 0.0f, 1.0f),
+				clamp(1.0f - abs(data[(height_map.get_width() * z) + x].y - 0.5f) / 0.25f, 0.0f, 1.0f),
+				clamp(1.0f - abs(data[(height_map.get_width() * z) + x].y - 0.9f) / 0.25f, 0.0f, 1.0f));
+
+			// *********************************
+			// Sum the components of the vector
+			auto total = tex_weight.x + tex_weight.y + tex_weight.z + tex_weight.w;
+			// Divide weight by sum
+			tex_weight /= total;
+			// Add tex weight to weights
+			tex_weights.push_back(tex_weight);
+			// ********************************* 
+		}
+	}
+
+	// Add necessary buffers to the geometry 
+	geom.add_buffer(positions, BUFFER_INDEXES::POSITION_BUFFER);
+	geom.add_buffer(normals, BUFFER_INDEXES::NORMAL_BUFFER);
+	geom.add_buffer(tex_coords, BUFFER_INDEXES::TEXTURE_COORDS_0);
+	geom.add_buffer(tex_weights, BUFFER_INDEXES::TEXTURE_COORDS_1);
+	geom.add_index_buffer(indices);
+
+	// Delete data
+	delete[] data;
+}
 
 bool load_content() {
 
 	// Create the meshes
 	createMeshes();
+
+	// Generate terrain
+	geometry geom;
+	// generate_terrain(geom, texs["ground_heightmap"], 20, 20, 1.0f);
+	meshes_ground["terrain"] = HMesh(geom);
 
 	//Set up materials
 	setUpMaterials();
@@ -296,6 +446,52 @@ bool load_content() {
 	setCameras();
 
 	return true;
+}
+
+vec4 glToScreen(const vec4& v)
+{
+	// Get the matrices and viewport
+	double modelView[16];
+	double projection[16];
+	double viewport[4];
+	double depthRange[2];
+
+	glGetDoublev(GL_MODELVIEW_MATRIX, modelView);
+	glGetDoublev(GL_PROJECTION_MATRIX, projection);
+	glGetDoublev(GL_VIEWPORT, viewport);
+	glGetDoublev(GL_DEPTH_RANGE, depthRange);
+
+	// Compose the matrices into a single row-major transformation
+	vec4 T[4];
+	int r, c, i;
+	for (r = 0; r < 4; ++r)
+	{
+		for (c = 0; c < 4; ++c)
+		{
+			T[r][c] = 0;
+			for (i = 0; i < 4; ++i)
+			{
+				// OpenGL matrices are column major
+				T[r][c] += projection[r + i * 4] * modelView[i + c * 4];
+			}
+		}
+	}
+
+	// Transform the vertex
+	vec4 result;
+	for (r = 0; r < 4; ++r)
+	{
+		result[r] = dot(T[r], v);
+	}
+
+	// Homogeneous divide
+	const double rhw = 1 / result.w;
+
+	return vec4(
+		(1 + result.x * rhw) * viewport[2] / 2 + viewport[0],
+		(1 - result.y * rhw) * viewport[3] / 2 + viewport[1],
+		(result.z * rhw) * (depthRange[1] - depthRange[0]) + depthRange[0],
+		rhw);
 }
 
 
@@ -809,6 +1005,64 @@ void renderShadow(map<string, HMesh> hmeshes)
 		renderer::render(m);
 	}
 }
+// Ground
+void renderHeightGround()
+{
+	// Bind effect
+	renderer::bind(ground_eff);
+	// Create MVP matrix
+	mat4 M;
+	mat4 V;
+	mat4 P;
+	mat4 MVP;
+	vec3 eye_pos;
+	if (setFree)
+	{
+		M = meshes_ground["terrain"].get_transform().get_transform_matrix();
+		V = free_cam.get_view();
+		P = free_cam.get_projection();
+		eye_pos = free_cam.get_position();
+		MVP = P * V * M;
+	}
+	else
+	{
+		M = meshes_ground["terrain"].get_transform().get_transform_matrix();
+		V = arc_cam.get_view();
+		P = arc_cam.get_projection();
+		eye_pos = arc_cam.get_position();
+		MVP = P * V * M;
+	}
+	// Set MVP matrix uniform
+	glUniformMatrix4fv(ground_eff.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
+	// Set M matrix uniform
+	glUniformMatrix4fv(ground_eff.get_uniform_location("M"), 1, GL_FALSE, value_ptr(M));
+	// Set N matrix uniform
+	glUniformMatrix3fv(ground_eff.get_uniform_location("N"), 1, GL_FALSE, value_ptr(meshes_ground["terrain"].get_transform().get_normal_matrix()));
+	// *********************************
+	// Set eye_pos uniform to camera position
+	glUniform3fv(ground_eff.get_uniform_location("eye_pos"), 1, value_ptr(eye_pos));
+	// *********************************
+	//Bind Terrian Material
+	renderer::bind(meshes_ground["terrain"].get_material(), "mat");
+	// Bind Light
+	renderer::bind(light, "light");
+	// Bind Tex[0] to TU 0, set uniform
+	renderer::bind(texs["sand"], 0);
+	glUniform1i(ground_eff.get_uniform_location("tex[0]"), 0);
+	// *********************************
+	//Bind Tex[1] to TU 1, set uniform
+	renderer::bind(texs["rock"], 1);
+	glUniform1i(ground_eff.get_uniform_location("tex[1]"), 1);
+	// Bind Tex[2] to TU 2, set uniform
+	renderer::bind(texs["black_rock"], 2);
+	glUniform1i(ground_eff.get_uniform_location("tex[2]"), 2);
+	// Bind Tex[3] to TU 3, set uniform
+	renderer::bind(texs["black_rock"], 3);
+	glUniform1i(ground_eff.get_uniform_location("tex[3]"), 3);
+	// *********************************
+	// Render terrain
+	renderer::render(meshes_ground["terrain"]);
+}
 
 bool render() {
 
@@ -853,6 +1107,8 @@ bool render() {
 	// Render teapot and plane shadows
 	renderShadow(meshes_shadow);
 
+	// Render ground heightmap
+	//renderHeightGround();
 	
 	return true;
 }

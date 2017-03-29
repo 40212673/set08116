@@ -151,10 +151,10 @@ bool load_content() {
   geometry geom;
 
   // Load height map
-  texture height_map("textures/heightmap.jpg");
+  texture height_map("textures/ground_heightmap.png");
 
   // Generate terrain
-  generate_terrain(geom, height_map, 20, 20, 2.0f);
+  generate_terrain(geom, height_map, 50, 50, 2.0f);
 
   // Use geometry to create terrain mesh
   terr = mesh(geom);
