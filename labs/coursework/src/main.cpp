@@ -2,6 +2,7 @@
 #include <graphics_framework.h>
 
 using namespace std;
+using namespace std::chrono;
 using namespace graphics_framework;
 using namespace glm;
 
@@ -26,8 +27,17 @@ public:
 	}
 };
 
+// Maximum number of particles
+const unsigned int MAX_PARTICLES = 4096;
+
+vec4 positions[MAX_PARTICLES];
+vec4 velocitys[MAX_PARTICLES];
+
+GLuint G_Position_buffer, G_Velocity_buffer;
+
+
 map<string, HMesh> meshes_gate, meshes_normal, meshes_phong, meshes_blend, meshes_glowing, meshes_shadow, meshes_skybox, meshes_ground;
-effect eff_basic, eff_phong, eff_blend, eff_normal, eff_shadow, eff_shadow_main, eff_glowing, sky_eff, ground_eff;
+effect eff_basic, eff_phong, eff_blend, eff_normal, eff_shadow, eff_shadow_main, eff_glowing, sky_eff, ground_eff, eff_smoke, compute_eff;
 map<string, texture> texs;
 map<string, texture*> tex_maps;
 free_camera free_cam;
@@ -37,6 +47,7 @@ point_light light_glowing;
 spot_light spot;
 shadow_map shadow;
 cubemap cube_map;
+GLuint vao;
 bool setFree = true;
 double cursor_x = 0.0;
 double cursor_y = 0.0;
@@ -57,13 +68,14 @@ void createMeshes()
 	shadow = shadow_map(renderer::get_screen_width(), renderer::get_screen_height());
 
 	//Create Shadow objects
-	meshes_shadow["plane"] = HMesh(geometry_builder::create_plane());
-	meshes_shadow["plane"].texture_scale = 0.1;
-	meshes_shadow["demon_teapot"] = HMesh(geometry("objects/teapot.obj"));
-	meshes_shadow["demon_teapot"].get_transform().translate(vec3(-30.0, 0.0, 0.0));
-	meshes_shadow["demon_teapot"].get_transform().scale = vec3(0.1, 0.1, 0.1);
+	//meshes_shadow["plane"] = HMesh(geometry_builder::create_plane());
+	//meshes_shadow["plane"].texture_scale = 0.1;
+	//meshes_shadow["demon_teapot"] = HMesh(geometry("objects/teapot.obj"));
+	//meshes_shadow["demon_teapot"].get_transform().translate(vec3(-30.0, 0.0, 0.0));
+	//meshes_shadow["demon_teapot"].get_transform().scale = vec3(0.1, 0.1, 0.1);
 
 
+	/*
 	// Create and transform meshes_gate a.k.a the gate
 	meshes_gate["column1"] = HMesh(geometry_builder::create_cylinder(1, 16, vec3(4.0f, 15.0f, 4.0f)));
 	meshes_gate["column1"].texture_scale = 0.05;
@@ -77,34 +89,37 @@ void createMeshes()
 	meshes_gate["horn2"] = meshes_gate["horn1"];
 	meshes_gate["horn2"].parent = &meshes_gate["horn1"];
 
-	// Create the Skybox
-	meshes_skybox["skybox"] = HMesh(geometry_builder::create_box());
-	meshes_skybox["skybox"].get_transform().scale *= 1000;
-
-
 	// Build gate
 	meshes_gate["column1"].get_transform().translate(vec3(-10.0f, 7.5f, 30.0f));
 	meshes_gate["column2"].get_transform().translate(vec3(20.0f, 0.0f, 0.0f));
 	meshes_gate["gate_ceiling"].get_transform().translate(vec3(-10.0f, 7.5f, 0.0f));
 	meshes_gate["horn1"].get_transform().translate(vec3(-10.0f, 5.0f, 0.f));
 	meshes_gate["horn2"].get_transform().translate(vec3(20.0f, 0.0f, 0.0f));
+	*/
+
+	// Create the Skybox
+	meshes_skybox["skybox"] = HMesh(geometry_builder::create_box());
+	meshes_skybox["skybox"].get_transform().scale *= 1000;
+
+
+	
 
 
 	// Set up Pentagrams for Phong
 	meshes_phong["pentagram1"] = HMesh(geometry_builder::create_cylinder(1, 64, vec3(10.0f, 0.05f, 10.0f)));
 	meshes_phong["pentagram1"].texture_scale = 0.1;
-	meshes_phong["pool"] = HMesh(geometry("objects/pool.obj"));	
-	meshes_phong["pentagram1"].get_transform().translate(vec3(27.5f, 8.0f, 30.0f));
+	//meshes_phong["pool"] = HMesh(geometry("objects/pool.obj"));	
+	meshes_phong["pentagram1"].get_transform().translate(vec3(22.5f, 60.0f, 3.0f));
 	meshes_phong["pentagram1"].texture_offset = vec2(2.446f, 2.446f);
 	meshes_phong["pentagram1"].get_transform().rotate(vec3(half_pi<float>(), 0.0f, 0.0f));
 	meshes_phong["pentagram2"] = meshes_phong["pentagram1"];
 	meshes_phong["pentagram2"].get_transform().translate(vec3(-55.0f, 0.0f, 0.0f));
 
 	// Set up pool
-	meshes_phong["pool"].get_transform().scale = vec3(20.0f);
-	meshes_phong["pool"].get_transform().translate(vec3(0.0f, -0.01f, -30.0f));
-	meshes_normal["lava"] = HMesh(geometry_builder::create_plane(29, 25));
-	meshes_normal["lava"].get_transform().translate(vec3(0, 3.4, -29));
+	//meshes_phong["pool"].get_transform().scale = vec3(20.0f);
+	//meshes_phong["pool"].get_transform().translate(vec3(0.0f, 0.01f, -30.0f));
+	meshes_normal["lava"] = HMesh(geometry_builder::create_plane(27.5, 25));
+	meshes_normal["lava"].get_transform().translate(vec3(-5, 21.5, 2));
 
 	// Set up sun and demonic baby cube and blend planet
 	meshes_glowing["sun"] = HMesh(geometry_builder::create_sphere(32, 32));
@@ -114,7 +129,7 @@ void createMeshes()
 	meshes_glowing["sun"].get_transform().translate(vec3(140, 40, -20));
 	meshes_blend["blend_planet"].get_transform().translate(vec3(0, 100, -100));
 	meshes_glowing["demon_cube"] = HMesh(geometry_builder::create_box(vec3(5.0f, 5.0f, 5.0f)));
-	meshes_glowing["demon_cube"].get_transform().translate(vec3(-10.0f, 20.0f, 0.0f));
+	meshes_glowing["demon_cube"].get_transform().translate(vec3(-10.0f, 50.0f, -50.0f));
 	meshes_glowing["demon_cube"].get_transform().rotate(vec3(0.0f, 0.0f, half_pi<float>() / 2.0));
 }
 
@@ -211,7 +226,7 @@ void loadTextures()
 	texs["lava_normalmap"] = texture("textures/lava_normalmap.png");
 	texs["sun"] = texture("textures/sun.png");
 	texs["demon_baby"] = texture("textures/demon_baby.png");
-	texs["ground_heightmap"] = texture("textures/heightmap.jpg");
+	texs["ground_heightmap"] = texture("textures/volcano.png");
 	texs["sand"] = texture("textures/sand.jpg");
 	texs["stone"] = texture("textures/stone.jpg");
 
@@ -223,10 +238,11 @@ void loadTextures()
 	tex_maps["horn2"] = &(texs["gate"]);
 	tex_maps["pentagram1"] = &(texs["pentagram"]);
 	tex_maps["pentagram2"] = &(texs["pentagram"]);
-	tex_maps["pool"] = &(texs["black_rock"]);
+	//tex_maps["pool"] = &(texs["black_rock"]);
 	tex_maps["lava"] = &(texs["lava"]);
 	tex_maps["sun"] = &(texs["sun"]);
 	tex_maps["demon_cube"] = &(texs["demon_baby"]);
+	tex_maps["ground_heightmap"] = &(texs["ground_heightmap"]);
 }
 
 // Function to load shaders and build effects
@@ -256,6 +272,7 @@ void loadBuildEffects()
 	eff_shadow.add_shader("shaders/spot.frag", GL_FRAGMENT_SHADER);
 
 	ground_eff.add_shader("shaders/terrain.frag", GL_FRAGMENT_SHADER);
+	ground_eff.add_shader("shaders/terrain.vert", GL_VERTEX_SHADER);
 	ground_eff.add_shader("shaders/part_direction.frag", GL_FRAGMENT_SHADER);
 	ground_eff.add_shader("shaders/part_weighted_texture_4.frag", GL_FRAGMENT_SHADER);
 
@@ -427,7 +444,7 @@ bool load_content() {
 
 	// Generate terrain
 	geometry geom;
-	// generate_terrain(geom, texs["ground_heightmap"], 20, 20, 1.0f);
+	generate_terrain(geom, texture("textures/volcano.png"), 100, 100, 50.0f);
 	meshes_ground["terrain"] = HMesh(geom);
 
 	//Set up materials
@@ -1051,7 +1068,7 @@ void renderHeightGround()
 	glUniform1i(ground_eff.get_uniform_location("tex[0]"), 0);
 	// *********************************
 	//Bind Tex[1] to TU 1, set uniform
-	renderer::bind(texs["rock"], 1);
+	renderer::bind(texs["stone"], 1);
 	glUniform1i(ground_eff.get_uniform_location("tex[1]"), 1);
 	// Bind Tex[2] to TU 2, set uniform
 	renderer::bind(texs["black_rock"], 2);
@@ -1105,10 +1122,10 @@ bool render() {
 	}
 
 	// Render teapot and plane shadows
-	renderShadow(meshes_shadow);
+	//renderShadow(meshes_shadow);
 
 	// Render ground heightmap
-	//renderHeightGround();
+	renderHeightGround();
 	
 	return true;
 }
