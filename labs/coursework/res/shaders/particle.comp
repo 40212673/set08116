@@ -23,14 +23,13 @@ void main(void) {
   // *********************************
 
   // Keep all particles on screen
-  if (abs(new_pos.x) > max_dims.x) {
-    new_pos.x = 0.0;
-  } else if (abs(new_pos.y) > max_dims.y) {
-    new_pos.y = 0.0;
-  } else if (abs(new_pos.z) > max_dims.z) {
-    new_pos.z = 0.0;
+if (abs(new_pos.y) > 70 ){
+    new_pos.y = 30;
+	new_pos.x = pos.w;
   }
-
+if (abs(new_pos.y) > 40 ){
+    new_pos.x += pow((new_pos.y - 40) / 30.0, 2.0);
+  }
   // Store the new position and velocity back into the buffers
   positions[index] = new_pos;
 }

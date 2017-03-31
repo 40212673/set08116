@@ -28,7 +28,7 @@ bool load_content() {
 
   tex = texture("textures/smoke.png");
 
-  // Initilise particles
+  // Initialise particles
   for (unsigned int i = 0; i < MAX_PARTICLES; ++i) {
     positions[i] = vec4(((2.0f * dist(rand)) - 1.0f) / 10.0f, 5.0 * dist(rand), 0.0f, 0.0f);
     velocitys[i] = vec4(0.0f, 0.1f + dist(rand), 0.0f, 0.0f);

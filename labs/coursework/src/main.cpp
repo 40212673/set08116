@@ -28,7 +28,7 @@ public:
 };
 
 // Maximum number of particles
-const unsigned int MAX_PARTICLES = 4096;
+const unsigned int MAX_PARTICLES = 16000;
 
 vec4 positions[MAX_PARTICLES];
 vec4 velocitys[MAX_PARTICLES];
@@ -48,6 +48,7 @@ spot_light spot;
 shadow_map shadow;
 cubemap cube_map;
 GLuint vao;
+GLuint pvao;
 bool setFree = true;
 double cursor_x = 0.0;
 double cursor_y = 0.0;
@@ -118,8 +119,9 @@ void createMeshes()
 	// Set up pool
 	//meshes_phong["pool"].get_transform().scale = vec3(20.0f);
 	//meshes_phong["pool"].get_transform().translate(vec3(0.0f, 0.01f, -30.0f));
-	meshes_normal["lava"] = HMesh(geometry_builder::create_plane(27.5, 25));
-	meshes_normal["lava"].get_transform().translate(vec3(-5, 21.5, 2));
+	meshes_normal["lava"] = HMesh(geometry_builder::create_cylinder(1, 64, vec3(30.0f, 0.05f, 30.0f)));
+	meshes_normal["lava"].texture_scale = 0.5;
+	meshes_normal["lava"].get_transform().translate(vec3(-3.8, 30.0, 2));
 
 	// Set up sun and demonic baby cube and blend planet
 	meshes_glowing["sun"] = HMesh(geometry_builder::create_sphere(32, 32));
@@ -132,7 +134,7 @@ void createMeshes()
 	meshes_glowing["demon_cube"].get_transform().translate(vec3(-10.0f, 50.0f, -50.0f));
 	meshes_glowing["demon_cube"].get_transform().rotate(vec3(0.0f, 0.0f, half_pi<float>() / 2.0));
 }
-
+ 
 //Function to set up the materials
 void setUpMaterials()
 {
@@ -210,6 +212,7 @@ void setLight()
 // Function to load textures
 void loadTextures()
 {
+	glGenVertexArrays(1, &pvao);
 	// Load Cubemap
 	array<string, 6> filenames = { "textures/purplenebula_ft.tga", "textures/purplenebula_bk.tga", "textures/purplenebula_up.tga",
 		"textures/purplenebula_dn.tga", "textures/purplenebula_rt.tga", "textures/purplenebula_lf.tga" };
@@ -229,6 +232,7 @@ void loadTextures()
 	texs["ground_heightmap"] = texture("textures/volcano.png");
 	texs["sand"] = texture("textures/sand.jpg");
 	texs["stone"] = texture("textures/stone.jpg");
+	texs["smoke"] = texture("textures/smoke.png");
 
 	// tex_maps points to texturesin texs to reuse textures in some instances
 	tex_maps["column1"] = &(texs["gate"]);
@@ -243,16 +247,17 @@ void loadTextures()
 	tex_maps["sun"] = &(texs["sun"]);
 	tex_maps["demon_cube"] = &(texs["demon_baby"]);
 	tex_maps["ground_heightmap"] = &(texs["ground_heightmap"]);
+	tex_maps["smoke"] = &(texs["smoke"]);
 }
 
-// Function to load shaders and build effects
+// Function to load shaders and build effects 
 void loadBuildEffects()
 {
 	// Load in shaders
 	eff_basic.add_shader("shaders/simple_texture.vert", GL_VERTEX_SHADER);
 	eff_basic.add_shader("shaders/simple_texture.frag", GL_FRAGMENT_SHADER);
 	eff_phong.add_shader("shaders/phong.vert", GL_VERTEX_SHADER);
-	eff_phong.add_shader("shaders/phong.frag", GL_FRAGMENT_SHADER);
+	eff_phong.add_shader("shaders/phong.frag", GL_FRAGMENT_SHADER); 
 	eff_blend.add_shader("shaders/blend.vert", GL_VERTEX_SHADER);
 	eff_blend.add_shader("shaders/blend.frag", GL_FRAGMENT_SHADER);
 	eff_normal.add_shader("shaders/normal.vert", GL_VERTEX_SHADER);
@@ -276,6 +281,12 @@ void loadBuildEffects()
 	ground_eff.add_shader("shaders/part_direction.frag", GL_FRAGMENT_SHADER);
 	ground_eff.add_shader("shaders/part_weighted_texture_4.frag", GL_FRAGMENT_SHADER);
 
+	eff_smoke.add_shader("shaders/smoke.vert", GL_VERTEX_SHADER);
+	eff_smoke.add_shader("shaders/smoke.frag", GL_FRAGMENT_SHADER);
+	eff_smoke.add_shader("shaders/smoke.geom", GL_GEOMETRY_SHADER);
+
+	compute_eff.add_shader("shaders/particle.comp", GL_COMPUTE_SHADER);
+
 	// Build effect  
 	eff_basic.build();
 	eff_phong.build();
@@ -286,6 +297,9 @@ void loadBuildEffects()
 	eff_shadow.build();
 	sky_eff.build();
 	ground_eff.build();
+	eff_smoke.build();
+	compute_eff.build();
+
 }
 
 // Function to set up cameras
@@ -437,6 +451,38 @@ void generate_terrain(geometry &geom, const texture &height_map, unsigned int wi
 	delete[] data;
 }
 
+void setParticles()
+{
+	default_random_engine rand(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count());
+	uniform_real_distribution<float> dist(-1.0f, 1.0f );
+	
+	for (unsigned int i = 0; i < MAX_PARTICLES; ++i) {
+		float randX = dist(rand);
+		positions[i] = vec4(randX * 14.0f + meshes_normal["lava"].get_transform().position.x, 30.0f, cos(randX) * 15.0f * dist(rand) + meshes_normal["lava"].get_transform().position.z, 0);
+		positions[i].w = positions[i].x;
+		velocitys[i] = vec4(0.0f, 10.0f + dist(rand) * 5.0, 0.0f, 0.0f);
+	}     
+	   
+	// a useless vao, but we need it bound or we get errors.
+	glGenVertexArrays(1, &vao);
+	glBindVertexArray(vao);
+	//Generate Position Data buffer
+	glGenBuffers(1, &G_Position_buffer);
+	// Bind as GL_SHADER_STORAGE_BUFFER
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, G_Position_buffer);
+	// Send Data to GPU, use GL_DYNAMIC_DRAW
+	glBufferData(GL_SHADER_STORAGE_BUFFER, MAX_PARTICLES * sizeof(vec4), positions, GL_DYNAMIC_DRAW);
+
+	// Generate Velocity Data buffer
+	glGenBuffers(1, &G_Velocity_buffer);
+	// Bind as GL_SHADER_STORAGE_BUFFER
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, G_Velocity_buffer);
+	// Send Data to GPU, use GL_DYNAMIC_DRAW
+	glBufferData(GL_SHADER_STORAGE_BUFFER, MAX_PARTICLES * sizeof(vec4), velocitys, GL_DYNAMIC_DRAW);
+	//Unbind
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+}
+
 bool load_content() {
 
 	// Create the meshes
@@ -458,7 +504,10 @@ bool load_content() {
 
 	// Load shader and build effects
 	loadBuildEffects();
-  
+
+	// Set up particles
+	setParticles();
+
 	// Set up cameras
 	setCameras();
 
@@ -513,6 +562,14 @@ vec4 glToScreen(const vec4& v)
 
 
 bool update(float delta_time) {
+
+	//Set the particle dimensions and movement
+	if (delta_time > 10.0f) {
+		delta_time = 10.0f;
+	}
+	renderer::bind(compute_eff);
+	glUniform3fv(compute_eff.get_uniform_location("max_dims"), 1, &(vec3(50.0f, 5.0f, 5.0f))[0]);
+	glUniform1f(compute_eff.get_uniform_location("delta_time"), delta_time);
 
 	// Set preferred camera
 	if (glfwGetKey(renderer::get_window(), '1')) {
@@ -583,15 +640,15 @@ bool update(float delta_time) {
 		static const double ratio_height = (quarter_pi<float>() * (sh / sw)) / sh;
 
 		// Use UP and DOWN to change camera distance
-		if (glfwGetKey(renderer::get_window(), GLFW_KEY_UP)) {
+		if (glfwGetKey(renderer::get_window(), GLFW_KEY_UP)) { 
 			arc_cam.set_distance(arc_cam.get_distance() + 6.0f * delta_time);
 		}
 		if (glfwGetKey(renderer::get_window(), GLFW_KEY_DOWN)) {
 			arc_cam.set_distance(arc_cam.get_distance() - 6.0f * delta_time);
-		}
+		}              
 		// Update the camera
-		arc_cam.update(delta_time);
-	}
+		arc_cam.update(delta_time); 
+	}  
 
 	// Update cursor pos
 	cursor_x = current_x;
@@ -1081,6 +1138,76 @@ void renderHeightGround()
 	renderer::render(meshes_ground["terrain"]);
 }
 
+void renderParticles()
+{
+	// Bind Compute Shader
+	renderer::bind(compute_eff);
+	// Bind data as SSBO
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, G_Position_buffer);
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, G_Velocity_buffer);
+	// Dispatch
+	glDispatchCompute(MAX_PARTICLES / 128, 1, 1);
+	// Sync, wait for completion
+	glMemoryBarrier(GL_ALL_BARRIER_BITS);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+
+	// *********************************
+	// Bind render effect
+	renderer::bind(eff_smoke);
+	// Create MV matrix
+	//mat4 M;
+	mat4 V;
+	mat4 P;
+	//mat4 MVP;
+	if (setFree)
+	{
+		//M = meshes_ground["terrain"].get_transform().get_transform_matrix();
+		V = free_cam.get_view();
+		P = free_cam.get_projection();
+		//MVP = P * V * M;
+	}
+	else
+	{
+		// = meshes_ground["terrain"].get_transform().get_transform_matrix();
+		V = arc_cam.get_view();
+		P = arc_cam.get_projection();
+		//MVP = P * V * M;
+	}
+
+	// Set the colour uniform
+	glUniform4fv(eff_smoke.get_uniform_location("colour"), 1, value_ptr(vec4(1.0f)));
+	// Set MV, and P matrix uniforms seperatly
+	glUniformMatrix4fv(eff_smoke.get_uniform_location("MV"), 1, GL_FALSE, value_ptr(V));
+	glUniformMatrix4fv(eff_smoke.get_uniform_location("P"), 1, GL_FALSE, value_ptr(P));
+	// Set point_size size uniform to .1f
+	glUniform1f(eff_smoke.get_uniform_location("point_size"), 1.0f);
+	// Bind particle texture
+	renderer::bind(texs["smoke"], 0);
+	glUniform1i(eff_smoke.get_uniform_location("tex"), 0);
+	// *********************************
+
+	// Bind position buffer as GL_ARRAY_BUFFER
+	glBindBuffer(GL_ARRAY_BUFFER, G_Position_buffer); 
+	// Setup vertex format
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, (void *)0);
+	// Enable Blending
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	// Disable Depth Mask
+	glDepthMask(GL_FALSE);
+	// Render
+	glDrawArrays(GL_POINTS, 0, MAX_PARTICLES);
+	// Tidy up, enable depth mask
+	glDepthMask(GL_TRUE);
+	// Disable Blend
+	glDisable(GL_BLEND);
+	// Unbind all arrays
+	glDisableVertexAttribArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glUseProgram(0);
+}
+
 bool render() {
 
 	//Render Skybox
@@ -1126,7 +1253,11 @@ bool render() {
 
 	// Render ground heightmap
 	renderHeightGround();
-	
+
+	// Render Particles
+	glBindVertexArray(pvao);
+	renderParticles();
+	glBindVertexArray(0); 
 	return true;
 }
 

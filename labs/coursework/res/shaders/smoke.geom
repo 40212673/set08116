@@ -18,13 +18,14 @@ void main() {
   vec4 position = gl_in[0].gl_Position;
 
   // fire temperature
-  float temp = clamp(2.0 / (2.0 / (height[0])), 0.0, 1.0);
+  float temp = clamp((70.0 / (height[0])), 0.0, 1.0);
   // scale between white and red
-  vec4 fire_colour = mix(vec4(1., .98, .42, 1.), vec4(0.88, .35, 0., 1.), temp);
+  //vec4 fire_colour = mix(vec4(1., .98, .42, 1.), vec4(0.88, .35, 0., 1.), temp);
+  vec4 fire_colour = vec4(1.0, 0.24, 0, 1.);
   // and then between red and black
-  fire_colour = mix(fire_colour, vec4(0), height[0] - 1.0);
+  fire_colour = mix(fire_colour, vec4(0), height[0] / 70.0);
   // fade smoke out near top
-  fire_colour.a = clamp((2.0 - height[0]) / 3.0, 0.0, 1.0);
+  fire_colour.a = clamp((70.0 - height[0]) / 20.0, 0.0, 1.0);
 
   // Expand point to 4 verts
    //point VA (-0.5, -0.5)
