@@ -37,7 +37,7 @@ GLuint G_Position_buffer, G_Velocity_buffer;
 
 
 map<string, HMesh> meshes_gate, meshes_normal, meshes_phong, meshes_blend, meshes_glowing, meshes_shadow, meshes_skybox, meshes_ground;
-effect eff_basic, eff_phong, eff_blend, eff_normal, eff_shadow, eff_shadow_main, eff_glowing, sky_eff, ground_eff, eff_smoke, compute_eff;
+effect eff_basic, eff_phong, eff_blend, eff_normal, eff_shadow, eff_shadow_main, eff_glowing, sky_eff, ground_eff, eff_smoke, compute_eff, eff_godraysFirst, eff_godraysSecond;
 map<string, texture> texs;
 map<string, texture*> tex_maps;
 free_camera free_cam;
@@ -47,8 +47,11 @@ point_light light_glowing;
 spot_light spot;
 shadow_map shadow;
 cubemap cube_map;
+frame_buffer frameGodFirst;
+frame_buffer frameGodTwo;
 GLuint vao;
 GLuint pvao;
+geometry screen_quad;
 bool setFree = true;
 double cursor_x = 0.0;
 double cursor_y = 0.0;
@@ -266,7 +269,7 @@ void loadBuildEffects()
 	eff_normal.add_shader("shaders/part_normal_map.frag", GL_FRAGMENT_SHADER);
 	eff_glowing.add_shader("shaders/point.frag", GL_FRAGMENT_SHADER);
 	eff_glowing.add_shader("shaders/point.vert", GL_VERTEX_SHADER);
-	eff_shadow_main.add_shader("shaders/shadow.vert", GL_VERTEX_SHADER);
+	eff_shadow_main.add_shader("shaders/shadow.vert", GL_VERTEX_SHADER); 
 	vector<string> frag_shaders{ "shaders/shadow.frag", "shaders/part_spot.frag", "shaders/part_shadow.frag" };
 	eff_shadow_main.add_shader(frag_shaders, GL_FRAGMENT_SHADER);
 
@@ -274,7 +277,7 @@ void loadBuildEffects()
 	sky_eff.add_shader("shaders/skybox.frag", GL_FRAGMENT_SHADER);
 
 	eff_shadow.add_shader("shaders/spot.vert", GL_VERTEX_SHADER);
-	eff_shadow.add_shader("shaders/spot.frag", GL_FRAGMENT_SHADER);
+	// eff_shadow.add_shader("shaders/spot.frag", GL_FRAGMENT_SHADER);
 
 	ground_eff.add_shader("shaders/terrain.frag", GL_FRAGMENT_SHADER);
 	ground_eff.add_shader("shaders/terrain.vert", GL_VERTEX_SHADER);
@@ -287,6 +290,10 @@ void loadBuildEffects()
 
 	compute_eff.add_shader("shaders/particle.comp", GL_COMPUTE_SHADER);
 
+	eff_godraysFirst.add_shader("shaders/spot.vert", GL_VERTEX_SHADER);
+	eff_godraysFirst.add_shader("shaders/black.frag", GL_FRAGMENT_SHADER);
+	eff_godraysSecond.add_shader("shaders/godRays.vert", GL_VERTEX_SHADER);
+	eff_godraysSecond.add_shader("shaders/godRays.frag", GL_FRAGMENT_SHADER);
 	// Build effect  
 	eff_basic.build();
 	eff_phong.build();
@@ -299,6 +306,8 @@ void loadBuildEffects()
 	ground_eff.build();
 	eff_smoke.build();
 	compute_eff.build();
+	eff_godraysFirst.build();
+	eff_godraysSecond.build();
 
 }
 
@@ -483,7 +492,25 @@ void setParticles()
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 }
 
+void setPostProcess()
+{
+	//Create Frame buffers
+	// Create frame buffer - use screen width and height
+	frameGodFirst = frame_buffer(renderer::get_screen_width(), renderer::get_screen_height());
+	frameGodTwo = frame_buffer(renderer::get_screen_width(), renderer::get_screen_height());
+
+	vector<vec3> positions{ vec3(-1.0f, -1.0f, 0.0f), vec3(1.0f, -1.0f, 0.0f), vec3(-1.0f, 1.0f, 0.0f),
+		vec3(1.0f, 1.0f, 0.0f) };
+	vector<vec2> tex_coords{ vec2(0.0, 0.0), vec2(1.0f, 0.0f), vec2(0.0f, 1.0f), vec2(1.0f, 1.0f) };
+	screen_quad.add_buffer(positions, BUFFER_INDEXES::POSITION_BUFFER);
+	screen_quad.add_buffer(tex_coords, BUFFER_INDEXES::TEXTURE_COORDS_0);
+	screen_quad.set_type(GL_TRIANGLE_STRIP);
+}
+
 bool load_content() {
+
+	// Set up post processing
+	setPostProcess();
 
 	// Create the meshes
 	createMeshes();
@@ -512,52 +539,6 @@ bool load_content() {
 	setCameras();
 
 	return true;
-}
-
-vec4 glToScreen(const vec4& v)
-{
-	// Get the matrices and viewport
-	double modelView[16];
-	double projection[16];
-	double viewport[4];
-	double depthRange[2];
-
-	glGetDoublev(GL_MODELVIEW_MATRIX, modelView);
-	glGetDoublev(GL_PROJECTION_MATRIX, projection);
-	glGetDoublev(GL_VIEWPORT, viewport);
-	glGetDoublev(GL_DEPTH_RANGE, depthRange);
-
-	// Compose the matrices into a single row-major transformation
-	vec4 T[4];
-	int r, c, i;
-	for (r = 0; r < 4; ++r)
-	{
-		for (c = 0; c < 4; ++c)
-		{
-			T[r][c] = 0;
-			for (i = 0; i < 4; ++i)
-			{
-				// OpenGL matrices are column major
-				T[r][c] += projection[r + i * 4] * modelView[i + c * 4];
-			}
-		}
-	}
-
-	// Transform the vertex
-	vec4 result;
-	for (r = 0; r < 4; ++r)
-	{
-		result[r] = dot(T[r], v);
-	}
-
-	// Homogeneous divide
-	const double rhw = 1 / result.w;
-
-	return vec4(
-		(1 + result.x * rhw) * viewport[2] / 2 + viewport[0],
-		(1 - result.y * rhw) * viewport[3] / 2 + viewport[1],
-		(result.z * rhw) * (depthRange[1] - depthRange[0]) + depthRange[0],
-		rhw);
 }
 
 
@@ -686,6 +667,19 @@ mat4 hierarchyCreation (HMesh *m)
 	return M;
 }
 
+vec2 getScreenSpaceSunPos()
+{
+	auto v = vec4(meshes_glowing["sun"].get_transform().position, 1.0f);
+	mat4 V = free_cam.get_view();
+	mat4 P = free_cam.get_projection();
+	v = V * v;
+	v = P * v;
+	v /= v.w;
+	v += vec4(1.0, 1.0, 0.0, 0.0);
+	v /= 2;
+	return vec2(v);
+}
+
 // SkyBox
 void renderSkybox()
 {
@@ -724,8 +718,62 @@ void renderSkybox()
 	glEnable(GL_CULL_FACE);
 }
 
+// FIRST PASS GOD RAYS
+void godRaysFirstPass(map<string, HMesh> allMeshes)
+{
+	// Bind effect
+	renderer::bind(eff_godraysFirst);
+	for (auto &mesh : allMeshes)
+	{
+		if (mesh.first == "sun")
+			continue;
+		auto m = mesh.second;
+		mat4 V;
+		mat4 P;
+		// Calculate MVP for the skybox
+		auto M = m.get_transform().get_transform_matrix();
+		if (setFree)
+		{
+			V = free_cam.get_view();
+			P = free_cam.get_projection();
+		}
+		else
+		{
+			V = arc_cam.get_view();
+			P = arc_cam.get_projection();
+		}
+		auto MVP = P * V * M;
+		// Set MVP matrix uniform
+		glUniformMatrix4fv(eff_godraysFirst.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
+		renderer::render(m);
 
-// Pentagrams and pool
+	}
+}
+
+void godRaysSecondPass()
+{
+	// Bind effect
+	renderer::bind(eff_godraysSecond);
+	renderer::set_render_target();
+
+	glUniform2fv(eff_godraysSecond.get_uniform_location("uScreenSpaceSunPos"), 1, value_ptr(getScreenSpaceSunPos()));
+	glUniform1f(eff_godraysSecond.get_uniform_location("uDensity"), 1.0f);
+	glUniform1f(eff_godraysSecond.get_uniform_location("uWeight"), 0.01f);
+	glUniform1f(eff_godraysSecond.get_uniform_location("uDecay"), 1.0f);
+	glUniform1f(eff_godraysSecond.get_uniform_location("uExposure"), 1.0f);
+	glUniform1i(eff_godraysSecond.get_uniform_location("uNumSamples"), 30);
+
+	renderer::bind(frameGodFirst.get_frame(), 0);
+	// Set the uniform 
+	glUniform1i(eff_godraysSecond.get_uniform_location("uOcclusionTexture"), 0);
+	 
+	renderer::bind(frameGodTwo.get_frame(), 1); 
+	// Set the uniform 
+	glUniform1i(eff_godraysSecond.get_uniform_location("mainTexture"), 1);
+
+	renderer::render(screen_quad);
+}
+// Pentagrams and pool 
 void renderPhong(HMesh &m, string name)
 {
 	// Bind effect
@@ -777,7 +825,7 @@ void renderPhong(HMesh &m, string name)
 	glUniform3fv(eff_phong.get_uniform_location("eye_pos"), 1, value_ptr(free_cam.get_position()));
 	// Render mesh
 	renderer::render(m);
-}
+} 
 // Build Gate
 void renderPhongGate(HMesh &m, string name)
 {
@@ -1208,16 +1256,35 @@ void renderParticles()
 	glUseProgram(0);
 }
 
+
+
 bool render() {
 
+	// Set render target to frame buffer
+	renderer::set_render_target(frameGodFirst);
+	// Clear frame
+	renderer::clear();
+	godRaysFirstPass(meshes_gate);
+	godRaysFirstPass(meshes_normal);
+	godRaysFirstPass(meshes_phong);
+	godRaysFirstPass(meshes_blend);
+	godRaysFirstPass(meshes_glowing);
+	//godRaysFirstPass(meshes_shadow);
+	godRaysFirstPass(meshes_skybox);
+	godRaysFirstPass(meshes_ground);
+
+	renderer::set_render_target(frameGodTwo);
+	renderer::clear();
 	//Render Skybox
 	renderSkybox();
+	 
+	 
 
 	// Render meshes_phong pentagrams
 	for (auto &e : meshes_phong) {
 		auto m = e.second;
 		renderPhong(m, e.first);
-	}
+	} 
 	
 	// Render meshes_gate a.k.a gate
 	for (auto &e : meshes_gate) {
@@ -1257,7 +1324,10 @@ bool render() {
 	// Render Particles
 	glBindVertexArray(pvao);
 	renderParticles();
-	glBindVertexArray(0); 
+	glBindVertexArray(0);
+
+	godRaysSecondPass();
+	
 	return true;
 }
 
