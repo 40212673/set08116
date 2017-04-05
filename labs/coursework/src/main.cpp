@@ -36,8 +36,8 @@ vec4 velocitys[MAX_PARTICLES];
 GLuint G_Position_buffer, G_Velocity_buffer;
 
 
-map<string, HMesh> meshes_gate, meshes_normal, meshes_phong, meshes_blend, meshes_glowing, meshes_shadow, meshes_skybox, meshes_ground;
-effect eff_basic, eff_phong, eff_blend, eff_normal, eff_shadow, eff_shadow_main, eff_glowing, sky_eff, ground_eff, eff_smoke, compute_eff, eff_godraysFirst, eff_godraysSecond;
+map<string, HMesh> meshes_gate, meshes_normal, meshes_phong, meshes_blend, meshes_glowing, meshes_skybox, meshes_ground;
+effect eff_basic, eff_phong, eff_blend, eff_normal, eff_glowing, sky_eff, ground_eff, eff_smoke, compute_eff, eff_godraysFirst, eff_godraysSecond;
 map<string, texture> texs;
 map<string, texture*> tex_maps;
 free_camera free_cam;
@@ -45,7 +45,6 @@ arc_ball_camera arc_cam;
 directional_light light, light_lava;
 point_light light_glowing;
 spot_light spot;
-shadow_map shadow;
 cubemap cube_map;
 frame_buffer frameGodFirst;
 frame_buffer frameGodTwo;
@@ -56,6 +55,7 @@ bool setFree = true;
 double cursor_x = 0.0;
 double cursor_y = 0.0;
 float t = 0.0f;
+bool toggleGodray = false;
 
 bool initialise() {
 	// Set input mode - hide the cursor
@@ -68,18 +68,6 @@ bool initialise() {
 // Function to create meshes
 void createMeshes()
 {
-	// Create shadow map- use screen size
-	shadow = shadow_map(renderer::get_screen_width(), renderer::get_screen_height());
-
-	//Create Shadow objects
-	//meshes_shadow["plane"] = HMesh(geometry_builder::create_plane());
-	//meshes_shadow["plane"].texture_scale = 0.1;
-	//meshes_shadow["demon_teapot"] = HMesh(geometry("objects/teapot.obj"));
-	//meshes_shadow["demon_teapot"].get_transform().translate(vec3(-30.0, 0.0, 0.0));
-	//meshes_shadow["demon_teapot"].get_transform().scale = vec3(0.1, 0.1, 0.1);
-
-
-	/*
 	// Create and transform meshes_gate a.k.a the gate
 	meshes_gate["column1"] = HMesh(geometry_builder::create_cylinder(1, 16, vec3(4.0f, 15.0f, 4.0f)));
 	meshes_gate["column1"].texture_scale = 0.05;
@@ -94,25 +82,24 @@ void createMeshes()
 	meshes_gate["horn2"].parent = &meshes_gate["horn1"];
 
 	// Build gate
-	meshes_gate["column1"].get_transform().translate(vec3(-10.0f, 7.5f, 30.0f));
+	meshes_gate["column1"].get_transform().translate(vec3(-45.0f, 0.75f, 40.0f));
+	meshes_gate["column1"].get_transform().rotate(vec3(0.0f, -half_pi<float>()/2.0, 0.0f));
+	meshes_gate["column1"].get_transform().scale *= 0.1;
 	meshes_gate["column2"].get_transform().translate(vec3(20.0f, 0.0f, 0.0f));
 	meshes_gate["gate_ceiling"].get_transform().translate(vec3(-10.0f, 7.5f, 0.0f));
 	meshes_gate["horn1"].get_transform().translate(vec3(-10.0f, 5.0f, 0.f));
 	meshes_gate["horn2"].get_transform().translate(vec3(20.0f, 0.0f, 0.0f));
-	*/
+	
 
 	// Create the Skybox
 	meshes_skybox["skybox"] = HMesh(geometry_builder::create_box());
 	meshes_skybox["skybox"].get_transform().scale *= 1000;
-
-
 	
 
 
 	// Set up Pentagrams for Phong
 	meshes_phong["pentagram1"] = HMesh(geometry_builder::create_cylinder(1, 64, vec3(10.0f, 0.05f, 10.0f)));
 	meshes_phong["pentagram1"].texture_scale = 0.1;
-	//meshes_phong["pool"] = HMesh(geometry("objects/pool.obj"));	
 	meshes_phong["pentagram1"].get_transform().translate(vec3(22.5f, 60.0f, 3.0f));
 	meshes_phong["pentagram1"].texture_offset = vec2(2.446f, 2.446f);
 	meshes_phong["pentagram1"].get_transform().rotate(vec3(half_pi<float>(), 0.0f, 0.0f));
@@ -120,8 +107,6 @@ void createMeshes()
 	meshes_phong["pentagram2"].get_transform().translate(vec3(-55.0f, 0.0f, 0.0f));
 
 	// Set up pool
-	//meshes_phong["pool"].get_transform().scale = vec3(20.0f);
-	//meshes_phong["pool"].get_transform().translate(vec3(0.0f, 0.01f, -30.0f));
 	meshes_normal["lava"] = HMesh(geometry_builder::create_cylinder(1, 64, vec3(30.0f, 0.05f, 30.0f)));
 	meshes_normal["lava"].texture_scale = 0.5;
 	meshes_normal["lava"].get_transform().translate(vec3(-3.8, 30.0, 2));
@@ -133,9 +118,9 @@ void createMeshes()
 	meshes_blend["blend_planet"] = meshes_glowing["sun"];
 	meshes_glowing["sun"].get_transform().translate(vec3(140, 40, -20));
 	meshes_blend["blend_planet"].get_transform().translate(vec3(0, 100, -100));
-	meshes_glowing["demon_cube"] = HMesh(geometry_builder::create_box(vec3(5.0f, 5.0f, 5.0f)));
-	meshes_glowing["demon_cube"].get_transform().translate(vec3(-10.0f, 50.0f, -50.0f));
-	meshes_glowing["demon_cube"].get_transform().rotate(vec3(0.0f, 0.0f, half_pi<float>() / 2.0));
+	meshes_glowing["demon_cube"] = HMesh(geometry_builder::create_box(vec3(0.5f, 0.5f, 0.5f)));
+	meshes_glowing["demon_cube"].get_transform().translate(vec3(-43.5f, 0.75f, 40.0f));
+	meshes_glowing["demon_cube"].get_transform().rotate(vec3(0.0f, half_pi<float>() / 2.0, 0.0f));
 }
  
 //Function to set up the materials
@@ -171,14 +156,6 @@ void setUpMaterials()
 
 	meshes_glowing["sun"].set_material(mat);
 
-	mat.set_emissive(vec4(0.0f, 0.0f, 0.0f, 1.0f));
-	mat.set_specular(vec4(1.0f, 1.0f, 1.0f, 1.0f));
-	mat.set_shininess(25.0f);
-	mat.set_diffuse(vec4(1.0f, 1.0f, 1.0f, 1.0f));
-	meshes_shadow["plane"].set_material(mat);
-	mat.set_diffuse(vec4(1.0f, 0.0f, 0.0f, 1.0f));
-	meshes_shadow["demon_teapot"].set_material(mat);
-
 	meshes_ground["terrain"].get_material().set_diffuse(vec4(0.2f, 0.2f, 0.2f, 1.0f));
 	meshes_ground["terrain"].get_material().set_specular(vec4(0.0f, 0.0f, 0.0f, 1.0f));
 	meshes_ground["terrain"].get_material().set_shininess(5.0f);
@@ -204,12 +181,6 @@ void setLight()
 	spot.set_direction(normalize(vec3(-1, -1, 0)));
 	spot.set_range(500.0f);
 	spot.set_power(10.0f);
-
-	// Update the shadow map light_position from the spot light
-	shadow.light_position = spot.get_position();
-	// do the same for light_dir property
-	shadow.light_dir = spot.get_direction();
-
 }
 
 // Function to load textures
@@ -245,7 +216,6 @@ void loadTextures()
 	tex_maps["horn2"] = &(texs["gate"]);
 	tex_maps["pentagram1"] = &(texs["pentagram"]);
 	tex_maps["pentagram2"] = &(texs["pentagram"]);
-	//tex_maps["pool"] = &(texs["black_rock"]);
 	tex_maps["lava"] = &(texs["lava"]);
 	tex_maps["sun"] = &(texs["sun"]);
 	tex_maps["demon_cube"] = &(texs["demon_baby"]);
@@ -269,15 +239,9 @@ void loadBuildEffects()
 	eff_normal.add_shader("shaders/part_normal_map.frag", GL_FRAGMENT_SHADER);
 	eff_glowing.add_shader("shaders/point.frag", GL_FRAGMENT_SHADER);
 	eff_glowing.add_shader("shaders/point.vert", GL_VERTEX_SHADER);
-	eff_shadow_main.add_shader("shaders/shadow.vert", GL_VERTEX_SHADER); 
-	vector<string> frag_shaders{ "shaders/shadow.frag", "shaders/part_spot.frag", "shaders/part_shadow.frag" };
-	eff_shadow_main.add_shader(frag_shaders, GL_FRAGMENT_SHADER);
 
 	sky_eff.add_shader("shaders/skybox.vert", GL_VERTEX_SHADER);
 	sky_eff.add_shader("shaders/skybox.frag", GL_FRAGMENT_SHADER);
-
-	eff_shadow.add_shader("shaders/spot.vert", GL_VERTEX_SHADER);
-	// eff_shadow.add_shader("shaders/spot.frag", GL_FRAGMENT_SHADER);
 
 	ground_eff.add_shader("shaders/terrain.frag", GL_FRAGMENT_SHADER);
 	ground_eff.add_shader("shaders/terrain.vert", GL_VERTEX_SHADER);
@@ -300,8 +264,6 @@ void loadBuildEffects()
 	eff_blend.build();
 	eff_normal.build();
 	eff_glowing.build();
-	eff_shadow_main.build();
-	eff_shadow.build();
 	sky_eff.build();
 	ground_eff.build();
 	eff_smoke.build();
@@ -600,6 +562,12 @@ bool update(float delta_time) {
 		if (glfwGetKey(renderer::get_window(), 'D')) {
 			movement = vec3(20.0f, 0.0f, 0.0f) * delta_time;
 		}
+		if (glfwGetKey(renderer::get_window(), GLFW_KEY_SPACE)) {
+			movement = vec3(0.0f, 20.0f, 0.0f) * delta_time;
+		}
+		if (glfwGetKey(renderer::get_window(), 'E')) {
+			toggleGodray = !toggleGodray;
+		}
 		// Move free_camera
 		free_cam.move(movement);
 
@@ -759,9 +727,12 @@ void godRaysSecondPass()
 	glUniform2fv(eff_godraysSecond.get_uniform_location("uScreenSpaceSunPos"), 1, value_ptr(getScreenSpaceSunPos()));
 	glUniform1f(eff_godraysSecond.get_uniform_location("uDensity"), 1.0f);
 	glUniform1f(eff_godraysSecond.get_uniform_location("uWeight"), 0.01f);
-	glUniform1f(eff_godraysSecond.get_uniform_location("uDecay"), 1.0f);
-	glUniform1f(eff_godraysSecond.get_uniform_location("uExposure"), 1.0f);
-	glUniform1i(eff_godraysSecond.get_uniform_location("uNumSamples"), 30);
+	glUniform1f(eff_godraysSecond.get_uniform_location("uDecay"), 0.99f);
+	glUniform1f(eff_godraysSecond.get_uniform_location("uExposure"), 0.8f);
+	if (toggleGodray)
+		glUniform1i(eff_godraysSecond.get_uniform_location("uNumSamples"), 50);
+	else
+		glUniform1i(eff_godraysSecond.get_uniform_location("uNumSamples"), 0);
 
 	renderer::bind(frameGodFirst.get_frame(), 0);
 	// Set the uniform 
@@ -1031,102 +1002,7 @@ void renderGlowing(HMesh &m, string name)
 	// Render the mesh
 	renderer::render(m);
 }
-// Plane and teacup
-void renderShadow(map<string, HMesh> hmeshes)
-{
-	// Set render target to shadow map
-	renderer::set_render_target(shadow);
-	// Clear depth buffer bit
-	glClear(GL_DEPTH_BUFFER_BIT);
-	// Set face cull mode to front
-	glCullFace(GL_FRONT);
 
-	mat4 LightProjectionMat = perspective<float>(90.f, renderer::get_screen_aspect(), 0.1f, 1000.f);
-
-	renderer::bind(eff_shadow);
-	
-	for (auto &e : hmeshes) {
-		auto m = e.second;
-		// Create MVP matrix
-		auto M = m.get_transform().get_transform_matrix();
-		// View matrix taken from shadow map
-		auto V = shadow.get_view();
-		auto MVP = LightProjectionMat * V * M;
-		// Set MVP matrix uniform
-		glUniformMatrix4fv(eff_shadow.get_uniform_location("MVP"), // Location of uniform
-			1,                                      // Number of values - 1 mat4
-			GL_FALSE,                               // Transpose the matrix?
-			value_ptr(MVP));                        // Pointer to matrix data
-													// Render mesh
-		renderer::render(m);
-	}
-
-	// Set render target back to the screen
-	renderer::set_render_target();
-	// Set face cull mode to back
-	glCullFace(GL_BACK);
-	// Bind shader
-	renderer::bind(eff_shadow_main);
-
-
-	for (auto &e : hmeshes) {
-		auto m = e.second;
-		// Create MVP matrix dependant on camera
-		mat4 M;
-		mat4 V;
-		mat4 P;
-		mat4 MVP;
-		if (setFree)
-		{
-			M = m.get_transform().get_transform_matrix();
-			V = free_cam.get_view();
-			P = free_cam.get_projection();
-			MVP = P * V * M;
-		}
-		else
-		{
-			M = m.get_transform().get_transform_matrix();
-			V = arc_cam.get_view();
-			P = arc_cam.get_projection();
-			MVP = P * V * M;
-		}
-		// Set MVP matrix uniform
-		glUniformMatrix4fv(eff_shadow_main.get_uniform_location("MVP"), // Location of uniform
-			1,                                    // Number of values - 1 mat4
-			GL_FALSE,                             // Transpose the matrix?
-			value_ptr(MVP));                      // Pointer to matrix data
-												  // Set M matrix uniform
-		glUniformMatrix4fv(eff_shadow_main.get_uniform_location("M"), 1, GL_FALSE, value_ptr(M));
-		// Set N matrix uniform
-		glUniformMatrix3fv(eff_shadow_main.get_uniform_location("N"), 1, GL_FALSE,
-			value_ptr(m.get_transform().get_normal_matrix()));
-		// Set lightMVP uniform, using:
-		//Model matrix from m
-		auto lM = m.get_transform().get_transform_matrix();
-		// viewmatrix from the shadow map
-		auto lV = shadow.get_view();
-		// Multiply together with LightProjectionMat
-		auto lightMVP = LightProjectionMat * lV * lM;
-		// Set uniform
-		glUniformMatrix4fv(eff_shadow_main.get_uniform_location("lightMVP"), 1, GL_FALSE, value_ptr(lightMVP));
-		// Bind material
-		renderer::bind(m.get_material(), "mat");
-		// Bind spot light
-		renderer::bind(spot, "spot");
-		// Bind texture
-		renderer::bind(texs["black_rock"], 0);
-		// Set tex uniform 
-		glUniform1i(eff_shadow_main.get_uniform_location("tex"), 0);
-		// Set eye position
-		glUniform3fv(eff_shadow_main.get_uniform_location("eye_pos"), 1, value_ptr(free_cam.get_position()));
-		// Bind shadow map texture - use texture unit 1
-		renderer::bind(shadow.buffer->get_depth(), 1);
-		// Set the shadow_map uniform
-		glUniform1i(eff_shadow_main.get_uniform_location("shadow_map"), 1);
-		// Render mesh
-		renderer::render(m);
-	}
-}
 // Ground
 void renderHeightGround()
 {
@@ -1256,9 +1132,10 @@ void renderParticles()
 	glUseProgram(0);
 }
 
-
-
 bool render() {
+
+	// Set clear colour to reddish
+	renderer::setClearColour(1.0f, 0.1f, 0.1f);
 
 	// Set render target to frame buffer
 	renderer::set_render_target(frameGodFirst);
@@ -1269,7 +1146,6 @@ bool render() {
 	godRaysFirstPass(meshes_phong);
 	godRaysFirstPass(meshes_blend);
 	godRaysFirstPass(meshes_glowing);
-	//godRaysFirstPass(meshes_shadow);
 	godRaysFirstPass(meshes_skybox);
 	godRaysFirstPass(meshes_ground);
 
@@ -1314,10 +1190,6 @@ bool render() {
 		}
 		renderGlowing(e.second, e.first);
 	}
-
-	// Render teapot and plane shadows
-	//renderShadow(meshes_shadow);
-
 	// Render ground heightmap
 	renderHeightGround();
 
