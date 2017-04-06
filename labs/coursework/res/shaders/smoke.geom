@@ -19,8 +19,6 @@ void main() {
 
   // fire temperature
   float temp = clamp((70.0 / (height[0])), 0.0, 1.0);
-  // scale between white and red
-  //vec4 fire_colour = mix(vec4(1., .98, .42, 1.), vec4(0.88, .35, 0., 1.), temp);
   vec4 fire_colour = vec4(1.0, 0.24, 0, 1.);
   // and then between red and black
   fire_colour = mix(fire_colour, vec4(0), height[0] / 70.0);

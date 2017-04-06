@@ -432,7 +432,7 @@ void setParticles()
 		positions[i] = vec4(randX * 14.0f + meshes_normal["lava"].get_transform().position.x, 30.0f, cos(randX) * 15.0f * dist(rand) + meshes_normal["lava"].get_transform().position.z, 0);
 		positions[i].w = positions[i].x;
 		velocitys[i] = vec4(0.0f, 10.0f + dist(rand) * 5.0, 0.0f, 0.0f);
-	}     
+	}      
 	   
 	// a useless vao, but we need it bound or we get errors.
 	glGenVertexArrays(1, &vao);
@@ -727,8 +727,10 @@ void godRaysSecondPass()
 	glUniform2fv(eff_godraysSecond.get_uniform_location("uScreenSpaceSunPos"), 1, value_ptr(getScreenSpaceSunPos()));
 	glUniform1f(eff_godraysSecond.get_uniform_location("uDensity"), 1.0f);
 	glUniform1f(eff_godraysSecond.get_uniform_location("uWeight"), 0.01f);
-	glUniform1f(eff_godraysSecond.get_uniform_location("uDecay"), 0.99f);
+	glUniform1f(eff_godraysSecond.get_uniform_location("uDecay"), 0.99f);  
 	glUniform1f(eff_godraysSecond.get_uniform_location("uExposure"), 0.8f);
+	glUniform3fv(eff_godraysSecond.get_uniform_location("camViewDirection"), 1, value_ptr(free_cam.get_view()));
+	glUniform3fv(eff_godraysSecond.get_uniform_location("sunViewDirection"), 1, value_ptr(free_cam.get_position() - meshes_glowing["sun"].get_transform().position));
 	if (toggleGodray)
 		glUniform1i(eff_godraysSecond.get_uniform_location("uNumSamples"), 50);
 	else
@@ -739,7 +741,7 @@ void godRaysSecondPass()
 	glUniform1i(eff_godraysSecond.get_uniform_location("uOcclusionTexture"), 0);
 	 
 	renderer::bind(frameGodTwo.get_frame(), 1); 
-	// Set the uniform 
+	// Set the uniform     
 	glUniform1i(eff_godraysSecond.get_uniform_location("mainTexture"), 1);
 
 	renderer::render(screen_quad);
@@ -1134,7 +1136,7 @@ void renderParticles()
 
 bool render() {
 
-	// Set clear colour to reddish
+	// Set clear colour to reddish 
 	renderer::setClearColour(1.0f, 0.1f, 0.1f);
 
 	// Set render target to frame buffer
