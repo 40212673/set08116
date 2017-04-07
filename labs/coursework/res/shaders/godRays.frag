@@ -24,7 +24,7 @@ vec3 godrays(float density, float weight, float decay, float exposure, int numSa
 		//if (dot(camViewDirection, sunViewDirection) < 0.0) 
 			samp = texture2D(occlusionTexture, textCoo).xyz;
 		//else
-			//samp = vec3(1.0f, 0.1f, 0.1f);
+		//	samp = vec3(1.0f, 0.1f, 0.1f);
 		samp *= illuminationDecay * weight;
 		fragColor += samp;
 		illuminationDecay *= decay;
@@ -50,11 +50,20 @@ uniform float uWeight;
 uniform float uDecay;
 uniform float uExposure;
 uniform int uNumSamples;
+uniform int status;
+
+const vec3 intensity = vec3(0.299, 0.587, 0.184);
 
 
 void main() {
 
 	vec3 fragColor = godrays(uDensity, uWeight, uDecay, uExposure, uNumSamples, uOcclusionTexture, mainTexture, uScreenSpaceSunPos, vUv, camViewDirection, sunViewDirection);
 
-    colour = vec4(fragColor , 1.0);
+	if (status == 1)
+	{
+		float grey_colour = dot(vec3(fragColor), intensity);
+		colour = vec4(grey_colour, grey_colour, grey_colour, 1.0);
+	}
+	else
+		colour = vec4(fragColor , 1.0);
 }

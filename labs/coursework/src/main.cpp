@@ -22,7 +22,7 @@ public:
 	}
 
 	HMesh() : mesh()
-	{
+	{ 
 
 	}
 };
@@ -56,6 +56,7 @@ double cursor_x = 0.0;
 double cursor_y = 0.0;
 float t = 0.0f;
 bool toggleGodray = false;
+int status = 0;
 
 bool initialise() {
 	// Set input mode - hide the cursor
@@ -565,6 +566,12 @@ bool update(float delta_time) {
 		if (glfwGetKey(renderer::get_window(), GLFW_KEY_SPACE)) {
 			movement = vec3(0.0f, 20.0f, 0.0f) * delta_time;
 		}
+		if (glfwGetKey(renderer::get_window(), 'Z')) {
+			movement = vec3(0.0f, -20.0f, 0.0f) * delta_time;
+		}
+		if (glfwGetKey(renderer::get_window(), 'Q')) {
+			status = (status + 1) % 2;
+		}
 		if (glfwGetKey(renderer::get_window(), 'E')) {
 			toggleGodray = !toggleGodray;
 		}
@@ -725,12 +732,13 @@ void godRaysSecondPass()
 	renderer::set_render_target();
 
 	glUniform2fv(eff_godraysSecond.get_uniform_location("uScreenSpaceSunPos"), 1, value_ptr(getScreenSpaceSunPos()));
-	glUniform1f(eff_godraysSecond.get_uniform_location("uDensity"), 1.0f);
+	glUniform1f(eff_godraysSecond.get_uniform_location("uDensity"), 1.0f); 
 	glUniform1f(eff_godraysSecond.get_uniform_location("uWeight"), 0.01f);
 	glUniform1f(eff_godraysSecond.get_uniform_location("uDecay"), 0.99f);  
 	glUniform1f(eff_godraysSecond.get_uniform_location("uExposure"), 0.8f);
 	glUniform3fv(eff_godraysSecond.get_uniform_location("camViewDirection"), 1, value_ptr(free_cam.get_view()));
 	glUniform3fv(eff_godraysSecond.get_uniform_location("sunViewDirection"), 1, value_ptr(free_cam.get_position() - meshes_glowing["sun"].get_transform().position));
+	glUniform1i(eff_godraysSecond.get_uniform_location("status"), status);
 	if (toggleGodray)
 		glUniform1i(eff_godraysSecond.get_uniform_location("uNumSamples"), 50);
 	else
