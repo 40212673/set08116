@@ -21,10 +21,10 @@ vec3 godrays(float density, float weight, float decay, float exposure, int numSa
 		textCoo -= deltaTextCoord;
 		vec3 samp;
 		// Uncomment for slightly buggy fix
-		//if (dot(camViewDirection, sunViewDirection) < 0.0) 
+		if (dot(camViewDirection, sunViewDirection) < 0.0) 
 			samp = texture2D(occlusionTexture, textCoo).xyz;
-		//else
-		//	samp = vec3(1.0f, 0.1f, 0.1f);
+		else
+			samp = vec3(1.0f, 0.1f, 0.1f);
 		samp *= illuminationDecay * weight;
 		fragColor += samp;
 		illuminationDecay *= decay;

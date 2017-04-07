@@ -426,7 +426,7 @@ void generate_terrain(geometry &geom, const texture &height_map, unsigned int wi
 void setParticles()
 {
 	default_random_engine rand(duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count());
-	uniform_real_distribution<float> dist(-1.0f, 1.0f );
+	uniform_real_distribution<float> dist(-1.0f, 1.0f );  
 	
 	for (unsigned int i = 0; i < MAX_PARTICLES; ++i) {
 		float randX = dist(rand);
@@ -736,7 +736,7 @@ void godRaysSecondPass()
 	glUniform1f(eff_godraysSecond.get_uniform_location("uWeight"), 0.01f);
 	glUniform1f(eff_godraysSecond.get_uniform_location("uDecay"), 0.99f);  
 	glUniform1f(eff_godraysSecond.get_uniform_location("uExposure"), 0.8f);
-	glUniform3fv(eff_godraysSecond.get_uniform_location("camViewDirection"), 1, value_ptr(free_cam.get_view()));
+	glUniform3fv(eff_godraysSecond.get_uniform_location("camViewDirection"), 1, value_ptr(free_cam.get_forward()));
 	glUniform3fv(eff_godraysSecond.get_uniform_location("sunViewDirection"), 1, value_ptr(free_cam.get_position() - meshes_glowing["sun"].get_transform().position));
 	glUniform1i(eff_godraysSecond.get_uniform_location("status"), status);
 	if (toggleGodray)
